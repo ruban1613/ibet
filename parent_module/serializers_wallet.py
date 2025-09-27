@@ -1,0 +1,62 @@
+"""
+Serializers for Parent Module wallet functionality.
+"""
+from rest_framework import serializers
+from .models import ParentOTPRequest, StudentMonitoring
+from student_module.models import Wallet
+
+
+class ParentWalletSerializer(serializers.ModelSerializer):
+    """Serializer for parent wallet model."""
+
+    class Meta:
+        model = Wallet
+        fields = [
+            'id', 'balance', 'is_locked', 'last_transaction_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_transaction_at']
+
+
+class ParentWalletDepositSerializer(serializers.Serializer):
+    """Serializer for wallet deposit operations."""
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    description = serializers.CharField(max_length=255, required=False, default='Deposit')
+
+
+class ParentWalletWithdrawalSerializer(serializers.Serializer):
+    """Serializer for wallet withdrawal operations."""
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
+
+
+class GenerateParentWalletOTPSerializer(serializers.Serializer):
+    """Serializer for generating OTP for wallet operations."""
+    operation_type = serializers.ChoiceField(choices=[
+        ('deposit', 'Deposit'),
+        ('withdrawal', 'Withdrawal'),
+        ('student_approval', 'Student Approval'),
+    ])
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    description = serializers.CharField(max_length=255, required=False)
+
+
+class VerifyParentWalletOTPSerializer(serializers.Serializer):
+    """Serializer for verifying OTP for wallet operations."""
+    otp_code = serializers.CharField(max_length=6, min_length=6)
+    otp_request_id = serializers.IntegerField()
+
+
+class StudentWalletApprovalSerializer(serializers.Serializer):
+    """Serializer for student wallet approval requests."""
+    student_id = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    otp_code = serializers.CharField(max_length=6, min_length=6)
+
+
+class LinkedStudentWalletSerializer(serializers.Serializer):
+    """Serializer for linked student wallet information."""
+    student_id = serializers.IntegerField(read_only=True)
+    student_username = serializers.CharField(read_only=True)
+    wallet_balance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    is_locked = serializers.BooleanField(read_only=True)
+    last_transaction_at = serializers.DateTimeField(read_only=True)
