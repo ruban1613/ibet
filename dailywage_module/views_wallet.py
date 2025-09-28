@@ -13,6 +13,7 @@ from core.security_monitoring import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import DailyWageWallet, DailyWageWalletTransaction, DailyWageWalletOTPRequest
 from .serializers_wallet import DailyWageWalletSerializer, DailyWageWalletTransactionSerializer
+from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 from decimal import Decimal
@@ -37,31 +38,52 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
         """Get wallet balance securely"""
         try:
             wallet = self.get_object()
-            SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
-                request.user.id,
-                {'action': 'balance_check'}
+        except DailyWageWallet.DoesNotExist:
+            # Create wallet if it doesn't exist
+            wallet = DailyWageWallet.objects.create(
+                user=request.user,
+                balance=Decimal('0.00'),
+                daily_earnings=Decimal('0.00'),
+                emergency_reserve=Decimal('0.00'),
+                weekly_target=Decimal('0.00'),
+                monthly_goal=Decimal('0.00')
             )
 
-            return Response({
-                'balance': wallet.balance,
-                'daily_earnings': wallet.daily_earnings,
-                'emergency_reserve': wallet.emergency_reserve,
-                'available_balance': wallet.available_balance,
-                'weekly_target': wallet.weekly_target,
-                'monthly_goal': wallet.monthly_goal,
-                'weekly_progress': wallet.weekly_progress,
-                'is_locked': wallet.is_locked,
-                'last_transaction_at': wallet.last_transaction_at
-            })
-        except DailyWageWallet.DoesNotExist:
-            return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'balance_check'}
+        )
+
+        return Response({
+            'balance': wallet.balance,
+            'daily_earnings': wallet.daily_earnings,
+            'emergency_reserve': wallet.emergency_reserve,
+            'available_balance': wallet.available_balance,
+            'weekly_target': wallet.weekly_target,
+            'monthly_goal': wallet.monthly_goal,
+            'weekly_progress': wallet.weekly_progress,
+            'is_locked': wallet.is_locked,
+            'last_transaction_at': wallet.last_transaction_at
+        })
 
     @action(detail=False, methods=['post'])
     def add_earnings(self, request):
         """Securely add daily earnings to wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             description = request.data.get('description', 'Daily Earnings')
 
@@ -107,7 +129,19 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
     def withdraw(self, request):
         """Secure withdrawal from wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             description = request.data.get('description', 'Withdrawal')
             is_essential = request.data.get('is_essential', False)
@@ -152,7 +186,19 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
     def transfer_to_emergency(self, request):
         """Transfer money to emergency reserve"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             description = request.data.get('description', 'Emergency Reserve Transfer')
 
@@ -188,7 +234,19 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
     def weekly_summary(self, request):
         """Get weekly earnings and expense summary"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
             current_week_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(days=timezone.now().weekday())
 
             # Get weekly earnings
@@ -219,8 +277,8 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
                 'remaining_target': wallet.weekly_target - earnings
             })
 
-        except DailyWageWallet.DoesNotExist:
-            return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DailyWageWalletTransactionViewSet(viewsets.ReadOnlyModelViewSet):

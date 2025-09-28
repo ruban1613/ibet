@@ -22,6 +22,10 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
 from django.core.cache import cache
+from individual_module.models_wallet import IndividualWallet
+from couple_module.models_wallet import CoupleWallet
+from dailywage_module.models_wallet import DailyWageWallet
+from retiree_module.models_wallet import RetireeWallet
 
 BASE_URL = 'http://127.0.0.1:8000/api'
 
@@ -52,6 +56,15 @@ def setup_test_users():
     couple_user1.save()
     users['couple1'] = couple_user1
 
+    # Second couple user
+    couple_user2, created = User.objects.get_or_create(
+        username='security_test_couple2',
+        defaults={'email': 'security_couple2@test.com', 'persona': 'INDIVIDUAL'}
+    )
+    couple_user2.set_password('testpass123')
+    couple_user2.save()
+    users['couple2'] = couple_user2
+
     # Daily wage user
     dailywage_user, created = User.objects.get_or_create(
         username='security_test_dailywage',
@@ -70,7 +83,39 @@ def setup_test_users():
     unauthorized_user.save()
     users['unauthorized'] = unauthorized_user
 
-    print("✅ Security test users setup complete")
+    # Create wallets for test users
+    print("🔧 Creating wallets for test users...")
+
+    # Individual wallet
+    individual_wallet, created = IndividualWallet.objects.get_or_create(
+        user=individual_user,
+        defaults={'balance': Decimal('1000.00')}
+    )
+    print(f"   Individual wallet: {'Created' if created else 'Exists'} (Balance: {individual_wallet.balance})")
+
+    # Couple wallet - create directly with partners
+    couple_wallet, created = CoupleWallet.objects.get_or_create(
+        partner1=couple_user1,
+        partner2=couple_user2,
+        defaults={'balance': Decimal('2000.00')}
+    )
+    print(f"   Couple wallet: {'Created' if created else 'Exists'} (Balance: {couple_wallet.balance})")
+
+    # Daily wage wallet
+    dailywage_wallet, created = DailyWageWallet.objects.get_or_create(
+        user=dailywage_user,
+        defaults={'balance': Decimal('500.00'), 'weekly_target': Decimal('1000.00')}
+    )
+    print(f"   Daily wage wallet: {'Created' if created else 'Exists'} (Balance: {dailywage_wallet.balance})")
+
+    # Retiree wallet for unauthorized user
+    retiree_wallet, created = RetireeWallet.objects.get_or_create(
+        user=unauthorized_user,
+        defaults={'balance': Decimal('5000.00'), 'pension_balance': Decimal('2000.00')}
+    )
+    print(f"   Retiree wallet: {'Created' if created else 'Exists'} (Balance: {retiree_wallet.balance})")
+
+    print("✅ Security test users and wallets setup complete")
     for module, user in users.items():
         print(f"   {module.title()}: {user.username} (ID: {user.id})")
     return users
@@ -103,13 +148,13 @@ def test_otp_generation_limits(token, module_name):
 
         start_time = time.time()
         if module_name == 'individual':
-            response = requests.post(f"{BASE_URL}/individual/generate-otp/", headers=headers, json=data)
+            response = requests.post(f"{BASE_URL}/individual/wallet/generate-otp/", headers=headers, json=data)
         elif module_name == 'couple':
             response = requests.post(f"{BASE_URL}/couple/wallet/generate-otp/", headers=headers, json=data)
         elif module_name == 'dailywage':
-            response = requests.post(f"{BASE_URL}/dailywage/generate-otp/", headers=headers, json=data)
+            response = requests.post(f"{BASE_URL}/dailywage/wallet/generate-otp/", headers=headers, json=data)
         else:
-            response = requests.post(f"{BASE_URL}/individual/generate-otp/", headers=headers, json=data)
+            response = requests.post(f"{BASE_URL}/individual/wallet/generate-otp/", headers=headers, json=data)
 
         end_time = time.time()
         response_time = end_time - start_time
@@ -154,13 +199,13 @@ def test_otp_verification_failures(token, module_name):
     }
 
     if module_name == 'individual':
-        response = requests.post(f"{BASE_URL}/individual/generate-otp/", headers=headers, json=data)
+        response = requests.post(f"{BASE_URL}/individual/wallet/generate-otp/", headers=headers, json=data)
     elif module_name == 'couple':
         response = requests.post(f"{BASE_URL}/couple/wallet/generate-otp/", headers=headers, json=data)
     elif module_name == 'dailywage':
-        response = requests.post(f"{BASE_URL}/dailywage/generate-otp/", headers=headers, json=data)
+        response = requests.post(f"{BASE_URL}/dailywage/wallet/generate-otp/", headers=headers, json=data)
     else:
-        response = requests.post(f"{BASE_URL}/individual/generate-otp/", headers=headers, json=data)
+        response = requests.post(f"{BASE_URL}/individual/wallet/generate-otp/", headers=headers, json=data)
 
     if response.status_code != 201:
         print(f"   ❌ Failed to generate OTP for testing: {response.status_code}")
@@ -192,13 +237,13 @@ def test_otp_verification_failures(token, module_name):
         }
 
         if module_name == 'individual':
-            response = requests.post(f"{BASE_URL}/individual/verify-otp/", headers=headers, json=verify_data)
+            response = requests.post(f"{BASE_URL}/individual/wallet/verify-otp/", headers=headers, json=verify_data)
         elif module_name == 'couple':
             response = requests.post(f"{BASE_URL}/couple/wallet/verify-otp/", headers=headers, json=verify_data)
         elif module_name == 'dailywage':
-            response = requests.post(f"{BASE_URL}/dailywage/verify-otp/", headers=headers, json=verify_data)
+            response = requests.post(f"{BASE_URL}/dailywage/wallet/verify-otp/", headers=headers, json=verify_data)
         else:
-            response = requests.post(f"{BASE_URL}/individual/verify-otp/", headers=headers, json=verify_data)
+            response = requests.post(f"{BASE_URL}/individual/wallet/verify-otp/", headers=headers, json=verify_data)
 
         print(f"     {scenario['description']}: Status {response.status_code}")
 

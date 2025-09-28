@@ -12,22 +12,14 @@ from .views_wallet_final import (
 
 # Create router for couple wallet endpoints
 router = DefaultRouter()
-router.register(r'wallet', CoupleWalletViewSet, basename='couple-wallet')
-router.register(r'wallet/transactions', CoupleWalletTransactionViewSet, basename='couple-wallet-transactions')
+router.register(r'', CoupleWalletViewSet, basename='couple-wallet')
+router.register(r'transactions', CoupleWalletTransactionViewSet, basename='couple-wallet-transactions')
 
 urlpatterns = [
+    # OTP endpoints (placed before router to avoid conflict)
+    path('generate-otp/', GenerateCoupleWalletOTPView.as_view(), name='generate-couple-wallet-otp'),
+    path('verify-otp/', VerifyCoupleWalletOTPView.as_view(), name='verify-couple-wallet-otp'),
+
     # Include router URLs
     path('', include(router.urls)),
-
-    # OTP endpoints
-    path('wallet/generate-otp/', GenerateCoupleWalletOTPView.as_view(), name='generate-couple-wallet-otp'),
-    path('wallet/verify-otp/', VerifyCoupleWalletOTPView.as_view(), name='verify-couple-wallet-otp'),
-
-    # Additional wallet endpoints that need explicit routing
-    path('wallet/balance/', CoupleWalletViewSet.as_view({'get': 'balance'}), name='couple-wallet-balance'),
-    path('wallet/deposit/', CoupleWalletViewSet.as_view({'post': 'deposit'}), name='couple-wallet-deposit'),
-    path('wallet/withdraw/', CoupleWalletViewSet.as_view({'post': 'withdraw'}), name='couple-wallet-withdraw'),
-    path('wallet/transfer-to-emergency/', CoupleWalletViewSet.as_view({'post': 'transfer_to_emergency'}), name='couple-wallet-transfer-emergency'),
-    path('wallet/transfer-to-goals/', CoupleWalletViewSet.as_view({'post': 'transfer_to_goals'}), name='couple-wallet-transfer-goals'),
-    path('wallet/monthly-summary/', CoupleWalletViewSet.as_view({'get': 'monthly_summary'}), name='couple-wallet-monthly-summary'),
 ]

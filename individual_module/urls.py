@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     IncomeSourceViewSet, EmergencyFundViewSet, IndividualDashboardViewSet,
     ExpenseAlertViewSet, FinancialGoalViewSet, IndividualOverviewView,
-    WalletManagementView, ExpenseTrackingView
+    ExpenseTrackingView
 )
 
 router = DefaultRouter()
@@ -17,7 +17,6 @@ router.register(r'financial-goals', FinancialGoalViewSet, basename='financial-go
 urlpatterns = [
     path('', include(router.urls)),
     path('overview/', IndividualOverviewView.as_view(), name='individual-overview'),
-    path('wallet/', WalletManagementView.as_view(), name='wallet-management'),
     path('expenses/', ExpenseTrackingView.as_view(), name='expense-tracking'),
 ]
 

@@ -19,6 +19,7 @@ class IndividualWallet(models.Model):
     monthly_budget = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     savings_goal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     current_savings = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    alert_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Threshold for low balance alerts")
     is_locked = models.BooleanField(default=False, help_text="Lock wallet for security reasons")
     last_transaction_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -137,6 +138,7 @@ class IndividualWalletOTPRequest(models.Model):
     otp_code = models.CharField(max_length=6)
     is_used = models.BooleanField(default=False)
     expires_at = models.DateTimeField()
+    cache_key = models.CharField(max_length=255, null=True, blank=True, help_text="Cache key for OTP validation")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

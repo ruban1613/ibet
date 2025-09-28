@@ -1,3 +1,13 @@
+
+
+
+
+
+
+
+
+
+
 """
 Secure wallet views for Couple Module.
 Provides secure shared wallet operations with OTP protection and monitoring.
@@ -91,9 +101,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
             )
 
             SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                SecurityEventManager.EVENT_TYPES['WALLET_DEPOSIT'],
                 request.user.id,
-                {'amount': amount, 'new_balance': new_balance, 'wallet_type': 'couple', 'transfer_type': 'credit'}
+                {'amount': amount, 'new_balance': new_balance, 'wallet_type': 'couple'}
             )
 
             return Response({
@@ -136,9 +146,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
             )
 
             SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                SecurityEventManager.EVENT_TYPES['WALLET_WITHDRAWAL'],
                 request.user.id,
-                {'amount': amount, 'new_balance': new_balance, 'wallet_type': 'couple', 'transfer_type': 'debit'}
+                {'amount': amount, 'new_balance': new_balance, 'wallet_type': 'couple'}
             )
 
             return Response({
@@ -172,7 +182,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
             )
 
             SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                SecurityEventManager.EVENT_TYPES['WALLET_TRANSFER'],
                 request.user.id,
                 {'amount': amount, 'new_balance': new_balance, 'type': 'emergency_fund', 'wallet_type': 'couple', 'transfer_type': 'transfer'}
             )
@@ -208,7 +218,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
             )
 
             SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                SecurityEventManager.EVENT_TYPES['WALLET_TRANSFER'],
                 request.user.id,
                 {'amount': amount, 'new_balance': new_balance, 'type': 'joint_goals', 'wallet_type': 'couple', 'transfer_type': 'transfer'}
             )

@@ -11,11 +11,14 @@ from .views_wallet import (
 app_name = 'individual_wallet'
 
 router = DefaultRouter()
-router.register(r'wallet', IndividualWalletViewSet, basename='individual-wallet')
-router.register(r'wallet-transactions', IndividualWalletTransactionViewSet, basename='individual-wallet-transactions')
+router.register(r'', IndividualWalletViewSet, basename='individual-wallet')
+router.register(r'transactions', IndividualWalletTransactionViewSet, basename='individual-wallet-transactions')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # OTP endpoints (placed before router to avoid conflict)
     path('generate-otp/', GenerateIndividualWalletOTPView.as_view(), name='generate-individual-wallet-otp'),
     path('verify-otp/', VerifyIndividualWalletOTPView.as_view(), name='verify-individual-wallet-otp'),
+
+    # Include router URLs
+    path('', include(router.urls)),
 ]

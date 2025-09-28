@@ -19,6 +19,7 @@ class RetireeWallet(models.Model):
     pension_balance = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Dedicated pension funds")
     emergency_fund = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Emergency fund balance")
     monthly_expense_limit = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    alert_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Threshold for low balance alerts")
     is_locked = models.BooleanField(default=False, help_text="Lock wallet for security reasons")
     last_transaction_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

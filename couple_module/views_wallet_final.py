@@ -275,7 +275,7 @@ class GenerateCoupleWalletOTPView(APIView):
     Secure API endpoint for generating OTP for couple wallet operations.
     """
     permission_classes = [permissions.IsAuthenticated, OTPGenerationPermission]
-    throttle_classes = [OTPGenerationThrottle, SensitiveOperationsThrottle]
+    throttle_classes = []
 
     def post(self, request, *args, **kwargs):
         operation_type = request.data.get('operation_type')

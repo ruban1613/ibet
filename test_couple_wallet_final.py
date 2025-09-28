@@ -12,8 +12,8 @@ import time
 # Add the IBET directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'IBET'))
 
-# Django setup - Use testing settings for increased throttling limits
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings_testing_final')
+# Django setup - Use default settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 import django
 django.setup()
 
@@ -30,17 +30,19 @@ def setup_couple_users():
     User = get_user_model()
 
     # Create couple users
-    couple_user1, created = User.objects.get_or_create(
+    couple_user1, created1 = User.objects.get_or_create(
         username='test_couple1',
-        defaults={'email': 'couple1@test.com', 'persona': 'INDIVIDUAL'}
+        defaults={'email': 'couple1@test.com', 'persona': 'COUPLE'}
     )
+    couple_user1.persona = 'COUPLE'
     couple_user1.set_password('testpass123')
     couple_user1.save()
 
-    couple_user2, created = User.objects.get_or_create(
+    couple_user2, created2 = User.objects.get_or_create(
         username='test_couple2',
-        defaults={'email': 'couple2@test.com', 'persona': 'INDIVIDUAL'}
+        defaults={'email': 'couple2@test.com', 'persona': 'COUPLE'}
     )
+    couple_user2.persona = 'COUPLE'
     couple_user2.set_password('testpass123')
     couple_user2.save()
 

@@ -56,7 +56,19 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     def deposit(self, request):
         """Secure deposit to wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except IndividualWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = IndividualWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    monthly_budget=Decimal('0.00'),
+                    savings_goal=Decimal('0.00'),
+                    current_savings=Decimal('0.00'),
+                    alert_threshold=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             description = request.data.get('description', 'Deposit')
 
@@ -100,7 +112,19 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     def withdraw(self, request):
         """Secure withdrawal from wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except IndividualWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = IndividualWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    monthly_budget=Decimal('0.00'),
+                    savings_goal=Decimal('0.00'),
+                    current_savings=Decimal('0.00'),
+                    alert_threshold=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             description = request.data.get('description', 'Withdrawal')
 
@@ -144,7 +168,19 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     def transfer_to_goal(self, request):
         """Transfer money to savings goal"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except IndividualWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = IndividualWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    monthly_budget=Decimal('0.00'),
+                    savings_goal=Decimal('0.00'),
+                    current_savings=Decimal('0.00'),
+                    alert_threshold=Decimal('0.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
             goal_name = request.data.get('goal_name', 'Savings Goal')
 

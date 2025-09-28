@@ -60,8 +60,8 @@
 ## Pending Works
 
 ### Immediate Tasks
-- [ ] Fix remaining WALLET_TRANSFER event types in IBET/couple_module/views_wallet.py
-- [ ] Run comprehensive security testing across all modules
+- [x] Fix remaining WALLET_TRANSFER event types in IBET/couple_module/views_wallet.py
+- [x] Run comprehensive security testing across all modules (in progress - fixing URL issues and wallet creation)
 - [ ] Implement edge case testing for all wallet operations
 - [ ] Create automated test suite for continuous integration
 

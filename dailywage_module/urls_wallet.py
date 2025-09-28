@@ -11,11 +11,14 @@ from .views_wallet import (
 app_name = 'dailywage_wallet'
 
 router = DefaultRouter()
-router.register(r'wallet', DailyWageWalletViewSet, basename='dailywage-wallet')
-router.register(r'wallet/transactions', DailyWageWalletTransactionViewSet, basename='dailywage-wallet-transactions')
+router.register(r'', DailyWageWalletViewSet, basename='dailywage-wallet')
+router.register(r'transactions', DailyWageWalletTransactionViewSet, basename='dailywage-wallet-transactions')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # OTP endpoints (placed before router to avoid conflict)
     path('generate-otp/', GenerateDailyWageWalletOTPView.as_view(), name='generate-dailywage-wallet-otp'),
     path('verify-otp/', VerifyDailyWageWalletOTPView.as_view(), name='verify-dailywage-wallet-otp'),
+
+    # Include router URLs
+    path('', include(router.urls)),
 ]
