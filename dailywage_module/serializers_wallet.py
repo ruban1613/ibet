@@ -2,6 +2,7 @@
 Serializers for Daily Wage Module wallet functionality.
 """
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from .models_wallet import DailyWageWallet, DailyWageWalletTransaction, DailyWageWalletOTPRequest
 
 
@@ -12,7 +13,7 @@ class DailyWageWalletSerializer(serializers.ModelSerializer):
         model = DailyWageWallet
         fields = [
             'id', 'balance', 'daily_earnings', 'weekly_target', 'monthly_goal',
-            'emergency_reserve', 'is_locked', 'last_transaction_at', 'created_at', 'updated_at'
+            'emergency_reserve', 'alert_threshold', 'is_locked', 'last_transaction_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_transaction_at']
 
@@ -62,9 +63,9 @@ class DailyWageWalletTransferSerializer(serializers.Serializer):
 class GenerateDailyWageWalletOTPSerializer(serializers.Serializer):
     """Serializer for generating OTP for wallet operations."""
     operation_type = serializers.ChoiceField(choices=[
-        ('add_earnings', 'Add Daily Earnings'),
-        ('withdrawal', 'Withdrawal'),
-        ('emergency_transfer', 'Emergency Reserve Transfer'),
+        ('add_earnings', _('Add Daily Earnings')),
+        ('withdrawal', _('Withdrawal')),
+        ('emergency_transfer', _('Emergency Reserve Transfer')),
     ])
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, required=False)
     description = serializers.CharField(max_length=255, required=False)

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from .models import (
     User, UserPersona, Category, Budget, Transaction, Reminder, ChatMessage, DailyLimit, OTPRequest
 )
@@ -22,7 +23,10 @@ class UserPersonaSerializer(serializers.Serializer):
     A simple serializer used only for validating the input
     when a user selects their persona.
     """
-    persona = serializers.ChoiceField(choices=UserPersona.choices)
+    persona = serializers.ChoiceField(choices=UserPersona.choices, error_messages={
+        'required': _('Persona selection is required.'),
+        'invalid_choice': _('Invalid persona choice.')
+    })
 
 
 # --- Core Budgeting Serializers ---

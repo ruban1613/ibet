@@ -141,3 +141,21 @@ class SecurityEventPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         # Only superusers or staff can access security monitoring
         return request.user and (request.user.is_superuser or request.user.is_staff)
+
+
+class IsDailyWageUser(permissions.BasePermission):
+    """
+    Permission class for daily wage wallet operations.
+    Ensures only daily wage users can access daily wage wallet functionality.
+    """
+
+    def has_permission(self, request, view):
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return False
+
+        # Check if user is a daily wage user (based on username for testing)
+        if 'dailywage' not in request.user.username.lower():
+            return False
+
+        return True

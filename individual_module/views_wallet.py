@@ -30,46 +30,58 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
         return IndividualWallet.objects.filter(user=self.request.user)
 
     def get_object(self):
-        return IndividualWallet.objects.get(user=self.request.user)
+        try:
+            return IndividualWallet.objects.get(user=self.request.user)
+        except IndividualWallet.DoesNotExist:
+            raise IndividualWallet.DoesNotExist("Individual wallet not found")
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
         """Get wallet balance securely"""
-        try:
-            wallet = self.get_object()
-            SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
-                request.user.id,
-                {'action': 'balance_check'}
-            )
+        wallet, created = IndividualWallet.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'balance': Decimal('0.00'),
+                'monthly_budget': Decimal('0.00'),
+                'savings_goal': Decimal('0.00'),
+                'current_savings': Decimal('0.00'),
+                'alert_threshold': Decimal('0.00')
+            }
+        )
 
-            return Response({
-                'balance': wallet.balance,
-                'available_balance': wallet.available_balance,
-                'is_locked': wallet.is_locked,
-                'last_transaction_at': wallet.last_transaction_at
-            })
-        except IndividualWallet.DoesNotExist:
-            return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'balance_check'}
+        )
+
+        return Response({
+            'balance': wallet.balance,
+            'available_balance': wallet.available_balance,
+            'is_locked': wallet.is_locked,
+            'last_transaction_at': wallet.last_transaction_at
+        })
 
     @action(detail=False, methods=['post'])
     def deposit(self, request):
         """Secure deposit to wallet"""
         try:
-            try:
-                wallet = self.get_object()
-            except IndividualWallet.DoesNotExist:
-                # Create wallet if it doesn't exist
-                wallet = IndividualWallet.objects.create(
-                    user=request.user,
-                    balance=Decimal('0.00'),
-                    monthly_budget=Decimal('0.00'),
-                    savings_goal=Decimal('0.00'),
-                    current_savings=Decimal('0.00'),
-                    alert_threshold=Decimal('0.00')
-                )
+            wallet, created = IndividualWallet.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'balance': Decimal('0.00'),
+                    'monthly_budget': Decimal('0.00'),
+                    'savings_goal': Decimal('0.00'),
+                    'current_savings': Decimal('0.00'),
+                    'alert_threshold': Decimal('0.00')
+                }
+            )
 
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Deposit')
 
             if amount <= 0:
@@ -125,7 +137,11 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
                     alert_threshold=Decimal('0.00')
                 )
 
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Withdrawal')
 
             if amount <= 0:
@@ -186,6 +202,15 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'individual_goal_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
 
             new_balance = wallet.transfer_to_goal(amount, goal_name)
 

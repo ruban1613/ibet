@@ -11,7 +11,7 @@ from .views_wallet import (
 app_name = 'dailywage_wallet'
 
 router = DefaultRouter()
-router.register(r'', DailyWageWalletViewSet, basename='dailywage-wallet')
+router.register(r'wallet', DailyWageWalletViewSet, basename='dailywage-wallet')
 router.register(r'transactions', DailyWageWalletTransactionViewSet, basename='dailywage-wallet-transactions')
 
 urlpatterns = [

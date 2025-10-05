@@ -11,8 +11,8 @@ from .views_wallet import (
 app_name = 'individual_wallet'
 
 router = DefaultRouter()
-router.register(r'', IndividualWalletViewSet, basename='individual-wallet')
-router.register(r'transactions', IndividualWalletTransactionViewSet, basename='individual-wallet-transactions')
+router.register(r'wallet', IndividualWalletViewSet, basename='individual-wallet')
+router.register(r'wallet/transactions', IndividualWalletTransactionViewSet, basename='individual-wallet-transactions')
 
 urlpatterns = [
     # OTP endpoints (placed before router to avoid conflict)

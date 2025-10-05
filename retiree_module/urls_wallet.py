@@ -12,10 +12,10 @@ app_name = 'retiree_wallet'
 
 router = DefaultRouter()
 router.register(r'wallet', RetireeWalletViewSet, basename='retiree-wallet')
-router.register(r'wallet/transactions', RetireeWalletTransactionViewSet, basename='retiree-wallet-transactions')
+router.register(r'transactions', RetireeWalletTransactionViewSet, basename='retiree-wallet-transactions')
 
 urlpatterns = [
-    path('', include(router.urls)),
     path('generate-otp/', GenerateRetireeWalletOTPView.as_view(), name='generate-retiree-wallet-otp'),
     path('verify-otp/', VerifyRetireeWalletOTPView.as_view(), name='verify-retiree-wallet-otp'),
+    path('', include(router.urls)),
 ]

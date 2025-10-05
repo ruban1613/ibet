@@ -14,5 +14,5 @@ urlpatterns = [
 
 # Include wallet-specific URLs
 urlpatterns += [
-    path('wallet/', include('dailywage_module.urls_wallet')),
+    path('', include('dailywage_module.urls_wallet')),
 ]

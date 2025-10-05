@@ -22,7 +22,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import CoupleWallet, CoupleWalletTransaction, CoupleWalletOTPRequest
-from django.db.models import Sum
+from django.db.models import Sum, Q, Count
 from django.utils import timezone
 from decimal import Decimal
 
@@ -37,12 +37,12 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Users can only access wallets where they are a partner
         return CoupleWallet.objects.filter(
-            models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
+            Q(partner1=self.request.user) | Q(partner2=self.request.user)
         )
 
     def get_object(self):
         return CoupleWallet.objects.get(
-            models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
+            Q(partner1=self.request.user) | Q(partner2=self.request.user)
         )
 
     @action(detail=False, methods=['get'])
@@ -75,7 +75,11 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure deposit to couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Deposit')
 
             if amount <= 0:
@@ -120,7 +124,11 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure withdrawal from couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Withdrawal')
 
             if amount <= 0:
@@ -165,11 +173,24 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to emergency fund"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Emergency Fund Transfer')
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'couple_emergency_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
 
             new_balance = wallet.transfer_to_emergency(amount, description)
 
@@ -201,11 +222,24 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to joint goals"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             goal_name = request.data.get('goal_name', 'Joint Goal')
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'couple_goal_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
 
             new_balance = wallet.transfer_to_goals(amount, goal_name)
 
@@ -245,10 +279,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                 wallet=wallet,
                 created_at__gte=current_month
             ).aggregate(
-                total_deposits=Sum('amount', filter=models.Q(transaction_type='DEPOSIT')),
-                total_withdrawals=Sum('amount', filter=models.Q(transaction_type='WITHDRAWAL')),
-                total_transfers=Sum('amount', filter=models.Q(transaction_type__in=['EMERGENCY_TRANSFER', 'GOAL_TRANSFER'])),
-                transaction_count=models.Count('id')
+                total_deposits=Sum('amount', filter=Q(transaction_type='DEPOSIT')),
+                total_withdrawals=Sum('amount', filter=Q(transaction_type='WITHDRAWAL')),
+                total_transfers=Sum('amount', filter=Q(transaction_type__in=['EMERGENCY_TRANSFER', 'GOAL_TRANSFER'])),
+                transaction_count=Count('id')
             )
 
             return Response({
@@ -297,7 +331,7 @@ class GenerateCoupleWalletOTPView(APIView):
         try:
             # Get couple wallet
             wallet = CoupleWallet.objects.get(
-                models.Q(partner1=request.user) | models.Q(partner2=request.user)
+                Q(partner1=request.user) | Q(partner2=request.user)
             )
         except CoupleWallet.DoesNotExist:
             return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)

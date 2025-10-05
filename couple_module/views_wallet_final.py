@@ -32,9 +32,12 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         )
 
     def get_object(self):
-        return CoupleWallet.objects.get(
-            models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
-        )
+        try:
+            return CoupleWallet.objects.get(
+                models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
+            )
+        except CoupleWallet.DoesNotExist:
+            raise CoupleWallet.DoesNotExist("Couple wallet not found")
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
@@ -66,7 +69,11 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure deposit to couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Deposit')
 
             if amount <= 0:
@@ -81,7 +88,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_429_TOO_MANY_REQUESTS
                 )
 
-            new_balance = wallet.deposit(amount, description, request.user)
+            try:
+                new_balance = wallet.deposit(amount, description, request.user)
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             # Audit the operation
             AuditService.audit_wallet_operation(
@@ -103,7 +113,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                 'deposited_by': request.user.username
             })
 
-        except ValueError as e:
+        except (ValueError, CoupleWallet.DoesNotExist) as e:
+            if isinstance(e, CoupleWallet.DoesNotExist):
+                return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
@@ -111,7 +123,11 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure withdrawal from couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Withdrawal')
 
             if amount <= 0:
@@ -126,7 +142,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_429_TOO_MANY_REQUESTS
                 )
 
-            new_balance = wallet.withdraw(amount, description, request.user)
+            try:
+                new_balance = wallet.withdraw(amount, description, request.user)
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             # Audit the operation
             AuditService.audit_wallet_operation(
@@ -148,7 +167,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                 'withdrawn_by': request.user.username
             })
 
-        except ValueError as e:
+        except (ValueError, CoupleWallet.DoesNotExist) as e:
+            if isinstance(e, CoupleWallet.DoesNotExist):
+                return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
@@ -156,13 +177,29 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to emergency fund"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             description = request.data.get('description', 'Emergency Fund Transfer')
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
 
-            new_balance = wallet.transfer_to_emergency(amount, description)
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'couple_emergency_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            try:
+                new_balance = wallet.transfer_to_emergency(amount, description)
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             # Audit the operation
             AuditService.audit_wallet_operation(
@@ -184,7 +221,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                 'emergency_fund': wallet.emergency_fund
             })
 
-        except ValueError as e:
+        except (ValueError, CoupleWallet.DoesNotExist) as e:
+            if isinstance(e, CoupleWallet.DoesNotExist):
+                return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
@@ -192,13 +231,29 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to joint goals"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
             goal_name = request.data.get('goal_name', 'Joint Goal')
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
 
-            new_balance = wallet.transfer_to_goals(amount, goal_name)
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'couple_goal_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            try:
+                new_balance = wallet.transfer_to_goals(amount, goal_name)
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             # Audit the operation
             AuditService.audit_wallet_operation(
@@ -221,7 +276,9 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
                 'goal_name': goal_name
             })
 
-        except ValueError as e:
+        except (ValueError, CoupleWallet.DoesNotExist) as e:
+            if isinstance(e, CoupleWallet.DoesNotExist):
+                return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'])
@@ -275,7 +332,7 @@ class GenerateCoupleWalletOTPView(APIView):
     Secure API endpoint for generating OTP for couple wallet operations.
     """
     permission_classes = [permissions.IsAuthenticated, OTPGenerationPermission]
-    throttle_classes = []
+    throttle_classes = [OTPGenerationThrottle]
 
     def post(self, request, *args, **kwargs):
         operation_type = request.data.get('operation_type')
@@ -284,6 +341,15 @@ class GenerateCoupleWalletOTPView(APIView):
 
         if not operation_type:
             return Response({'error': _('Operation type is required')}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Implement rate limiting check here (additional to throttle_classes)
+        user = request.user
+        from django.core.cache import cache
+        cache_key = f"otp_gen_limit_{user.id}"
+        count = cache.get(cache_key, 0)
+        if count >= 5:
+            return Response({'error': _('OTP generation rate limit exceeded')}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        cache.set(cache_key, count + 1, timeout=3600)  # 1 hour window
 
         try:
             # Get couple wallet

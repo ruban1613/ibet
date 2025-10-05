@@ -2,6 +2,7 @@
 Serializers for Individual Module wallet functionality.
 """
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from .models_wallet import IndividualWallet, IndividualWalletTransaction, IndividualWalletOTPRequest
 
 
@@ -42,27 +43,27 @@ class IndividualWalletOTPRequestSerializer(serializers.ModelSerializer):
 class IndividualWalletDepositSerializer(serializers.Serializer):
     """Serializer for wallet deposit operations."""
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
-    description = serializers.CharField(max_length=255, required=False, default='Deposit')
+    description = serializers.CharField(max_length=255, required=False, default=_('Deposit'))
 
 
 class IndividualWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for wallet withdrawal operations."""
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
-    description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
+    description = serializers.CharField(max_length=255, required=False, default=_('Withdrawal'))
 
 
 class IndividualWalletTransferSerializer(serializers.Serializer):
     """Serializer for wallet transfer to savings operations."""
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
-    goal_name = serializers.CharField(max_length=100, default='Savings Goal')
+    goal_name = serializers.CharField(max_length=100, default=_('Savings Goal'))
 
 
 class GenerateIndividualWalletOTPSerializer(serializers.Serializer):
     """Serializer for generating OTP for wallet operations."""
     operation_type = serializers.ChoiceField(choices=[
-        ('deposit', 'Deposit'),
-        ('withdrawal', 'Withdrawal'),
-        ('transfer', 'Transfer to Savings'),
+        ('deposit', _('Deposit')),
+        ('withdrawal', _('Withdrawal')),
+        ('transfer', _('Transfer to Savings')),
     ])
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     description = serializers.CharField(max_length=255, required=False)
