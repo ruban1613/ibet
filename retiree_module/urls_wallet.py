@@ -18,4 +18,6 @@ urlpatterns = [
     path('generate-otp/', GenerateRetireeWalletOTPView.as_view(), name='generate-retiree-wallet-otp'),
     path('verify-otp/', VerifyRetireeWalletOTPView.as_view(), name='verify-retiree-wallet-otp'),
     path('', include(router.urls)),
+    # Explicit balance endpoint for URL reversal
+    path('wallet/balance/', RetireeWalletViewSet.as_view({'get': 'balance'}), name='retiree-wallet-balance'),
 ]

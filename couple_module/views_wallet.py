@@ -421,11 +421,10 @@ class VerifyCoupleWalletOTPView(APIView):
                 return Response({'error': _('OTP has expired')}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate OTP using security service
-            cache_key = f"otp_request_{otp_request.id}"
             is_valid, error_message = OTPSecurityService.validate_otp(
                 request.user.id,
                 otp_code,
-                cache_key,
+                otp_request.cache_key,
                 'couple_wallet_operation'
             )
 

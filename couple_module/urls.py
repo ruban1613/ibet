@@ -25,5 +25,5 @@ urlpatterns = [
     path('create-couple/', CreateCoupleView.as_view(), name='create-couple'),
 
     # Include wallet-specific URLs
-    path('', include('couple_module.urls_wallet')),
+    path('', include('couple_module.urls_wallet_final')),
 ]

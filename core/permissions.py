@@ -125,10 +125,14 @@ class OTPVerificationPermission(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        # Only students can verify OTPs
-        if not hasattr(request.user, 'persona') or request.user.persona != 'STUDENT':
-            return False
+        # Allow users to verify their own OTPs regardless of persona
+        # The view will handle object-level permission checks
+        return True
 
+    def has_object_permission(self, request, view, obj):
+        # Ensure the user can only verify their own OTP requests
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
         return True
 
 

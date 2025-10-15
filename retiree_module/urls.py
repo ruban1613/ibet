@@ -17,5 +17,5 @@ urlpatterns = router.urls
 
 # Include wallet-specific URLs
 urlpatterns += [
-    path('wallet/', include('retiree_module.urls_wallet')),
+    path('wallet/', include('retiree_module.urls_wallet', namespace='retiree_wallet')),
 ]

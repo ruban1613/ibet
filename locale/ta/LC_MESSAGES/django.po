@@ -31,19 +31,19 @@ msgstr "மொழி வெற்றிகரமாக மாற்றப்ப�
 
 #: .\ibet\couple_module\models.py:85 .\ibet\parent_module\models.py:83
 msgid "Pending"
-msgstr ""
+msgstr "நிலுவையில்"
 
 #: .\ibet\couple_module\models.py:86
 msgid "Approved"
-msgstr ""
+msgstr "அங்கீகரிக்கப்பட்டது"
 
 #: .\ibet\couple_module\models.py:87
 msgid "Rejected"
-msgstr ""
+msgstr "நிராகரிக்கப்பட்டது"
 
 #: .\ibet\couple_module\models.py:88 .\ibet\parent_module\models.py:85
 msgid "Expired"
-msgstr ""
+msgstr "காலாவதியானது"
 
 #: .\ibet\couple_module\models.py:148
 #: .\ibet\couple_module\models_wallet.py:161
@@ -51,7 +51,7 @@ msgstr ""
 #: .\ibet\individual_module\serializers_wallet.py:46
 #: .\ibet\individual_module\serializers_wallet.py:64
 msgid "Deposit"
-msgstr ""
+msgstr "டெபாசிட்"
 
 #: .\ibet\couple_module\models.py:149
 #: .\ibet\couple_module\models_wallet.py:162
@@ -62,7 +62,7 @@ msgstr ""
 #: .\ibet\individual_module\serializers_wallet.py:65
 #: .\ibet\retiree_module\models_wallet.py:142
 msgid "Withdrawal"
-msgstr ""
+msgstr "திரும்பப் பெறுதல்"
 
 #: .\ibet\couple_module\models.py:150
 #, fuzzy

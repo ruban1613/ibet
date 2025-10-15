@@ -386,7 +386,7 @@ msgstr "जोड़े के वॉलेट ऑपरेशन के लि�
 msgid ""
 "The OTP has been securely generated and must be shared with the user "
 "directly."
-msgstr ""
+msgstr "OTP सुरक्षित रूप से उत्पन्न किया गया है और इसे उपयोगकर्ता के साथ सीधे साझा किया जाना चाहिए।"
 
 #: .\ibet\dailywage_module\models.py:114 .\ibet\individual_module\models.py:33
 #: .\ibet\student_module\models.py:66

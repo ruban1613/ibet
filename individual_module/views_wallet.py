@@ -12,7 +12,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import IndividualWallet, IndividualWalletTransaction, IndividualWalletOTPRequest
-from .serializers_wallet import IndividualWalletTransactionSerializer
+from .serializers_wallet import IndividualWalletSerializer, IndividualWalletTransactionSerializer
 from django.db.models import Sum
 from django.utils import timezone
 from decimal import Decimal
@@ -24,7 +24,7 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
-    serializer_class = None  # Not used for actions
+    serializer_class = IndividualWalletSerializer
 
     def get_queryset(self):
         return IndividualWallet.objects.filter(user=self.request.user)
@@ -347,7 +347,7 @@ class VerifyIndividualWalletOTPView(APIView):
                 return Response({'error': _('OTP has expired')}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate OTP using security service
-            cache_key = f"otp_request_{otp_request.id}"
+            cache_key = otp_request.cache_key
             is_valid, error_message = OTPSecurityService.validate_otp(
                 request.user.id,
                 otp_code,

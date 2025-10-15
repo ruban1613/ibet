@@ -13,6 +13,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models import ParentOTPRequest, StudentMonitoring, ParentAlert
+from .serializers_wallet import ParentWalletSerializer
 from student_module.models import Wallet, ParentStudentLink, OTPRequest
 from django.contrib.auth import get_user_model
 
@@ -28,6 +29,7 @@ class ParentWalletViewSet(viewsets.ModelViewSet):
     """
     Secure API endpoint for parent wallet management.
     """
+    serializer_class = ParentWalletSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
 
@@ -300,6 +302,9 @@ class VerifyParentWalletOTPView(APIView):
 
             # Validate OTP using security service
             cache_key = otp_request.cache_key
+            if not cache_key:
+                return Response({'error': _('Invalid OTP request')}, status=status.HTTP_400_BAD_REQUEST)
+
             is_valid, error_message = OTPSecurityService.validate_otp(
                 request.user.id,
                 otp_code,
