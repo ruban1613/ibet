@@ -3,6 +3,7 @@ Serializers for Retiree Module wallet functionality.
 """
 from rest_framework import serializers
 from .models_wallet import RetireeWallet, RetireeWalletTransaction, RetireeWalletOTPRequest
+from decimal import Decimal
 
 
 class RetireeWalletSerializer(serializers.ModelSerializer):
@@ -42,13 +43,13 @@ class RetireeWalletOTPRequestSerializer(serializers.ModelSerializer):
 
 class RetireeWalletDepositSerializer(serializers.Serializer):
     """Serializer for wallet deposit operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Deposit')
 
 
 class RetireeWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for wallet withdrawal operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
     use_pension_fund = serializers.BooleanField(default=False, required=False)
 

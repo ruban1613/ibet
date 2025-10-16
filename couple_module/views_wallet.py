@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 """
 Secure wallet views for Couple Module.
 Provides secure shared wallet operations with OTP protection and monitoring.
@@ -17,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
+from django.db import models
 from core.throttling import OTPGenerationThrottle, OTPVerificationThrottle, WalletAccessThrottle, SensitiveOperationsThrottle
 from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring import SecurityEventManager, AuditService
@@ -24,7 +16,7 @@ from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import CoupleWallet, CoupleWalletTransaction, CoupleWalletOTPRequest
 from django.db.models import Sum
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 class CoupleWalletViewSet(viewsets.ModelViewSet):
@@ -50,36 +42,51 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Get wallet balance securely"""
         try:
             wallet = self.get_object()
-            SecurityEventManager.log_event(
-                SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
-                request.user.id,
-                {'action': 'balance_check', 'wallet_type': 'couple'}
-            )
-
-            return Response({
-                'balance': wallet.balance,
-                'emergency_fund': wallet.emergency_fund,
-                'joint_goals': wallet.joint_goals,
-                'available_balance': wallet.available_balance,
-                'monthly_budget': wallet.monthly_budget,
-                'is_locked': wallet.is_locked,
-                'last_transaction_at': wallet.last_transaction_at,
-                'partner1': wallet.partner1.username,
-                'partner2': wallet.partner2.username
-            })
         except CoupleWallet.DoesNotExist:
-            return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
+            # Create wallet if it doesn't exist - find partners
+            from couple_module.models import CoupleLink
+            try:
+                couple_link = CoupleLink.objects.get(
+                    models.Q(partner1=request.user) | models.Q(partner2=request.user)
+                )
+                wallet = CoupleWallet.objects.create(
+                    partner1=couple_link.partner1,
+                    partner2=couple_link.partner2,
+                    balance=Decimal('0.00'),
+                    emergency_fund=Decimal('0.00'),
+                    joint_goals=Decimal('0.00'),
+                    monthly_budget=Decimal('0.00')
+                )
+            except CoupleLink.DoesNotExist:
+                return Response({'error': _('No couple relationship found')}, status=status.HTTP_404_NOT_FOUND)
+
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'balance_check', 'wallet_type': 'couple'}
+        )
+
+        return Response({
+            'balance': wallet.balance,
+            'emergency_fund': wallet.emergency_fund,
+            'joint_goals': wallet.joint_goals,
+            'available_balance': wallet.available_balance,
+            'monthly_budget': wallet.monthly_budget,
+            'is_locked': wallet.is_locked,
+            'last_transaction_at': wallet.last_transaction_at,
+            'partner1': wallet.partner1.username,
+            'partner2': wallet.partner2.username
+        })
 
     @action(detail=False, methods=['post'])
     def deposit(self, request):
         """Secure deposit to couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Deposit')
-
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount'), default=None)
             if amount <= 0:
-                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _('Amount must be greater than zero')}, status=status.HTTP_400_BAD_REQUEST)
+            description = request.data.get('description', 'Deposit')
 
             # Check for suspicious activity
             if SecurityEventManager.detect_suspicious_activity(
@@ -120,11 +127,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure withdrawal from couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
-
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount'), default=None)
             if amount <= 0:
-                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _('Amount must be greater than zero')}, status=status.HTTP_400_BAD_REQUEST)
+            description = request.data.get('description', 'Withdrawal')
 
             # Check for suspicious activity
             if SecurityEventManager.detect_suspicious_activity(
@@ -165,11 +171,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to emergency fund"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Emergency Fund Transfer')
-
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount'), default=None)
             if amount <= 0:
-                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _('Amount must be greater than zero')}, status=status.HTTP_400_BAD_REQUEST)
+            description = request.data.get('description', 'Emergency Fund Transfer')
 
             new_balance = wallet.transfer_to_emergency(amount, description)
 
@@ -201,11 +206,10 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to joint goals"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
-            goal_name = request.data.get('goal_name', 'Joint Goal')
-
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount'), default=None)
             if amount <= 0:
-                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _('Amount must be greater than zero')}, status=status.HTTP_400_BAD_REQUEST)
+            goal_name = request.data.get('goal_name', 'Joint Goal')
 
             new_balance = wallet.transfer_to_goals(amount, goal_name)
 
@@ -288,11 +292,18 @@ class GenerateCoupleWalletOTPView(APIView):
 
     def post(self, request, *args, **kwargs):
         operation_type = request.data.get('operation_type')
-        amount = request.data.get('amount')
+        amount_data = request.data.get('amount')
         description = request.data.get('description', '')
 
         if not operation_type:
             return Response({'error': _('Operation type is required')}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate amount if provided
+        amount = None
+        if amount_data is not None:
+            amount, error = validate_and_convert_amount(amount_data)
+            if error:
+                return Response({'error': _(error)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Get couple wallet

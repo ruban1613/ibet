@@ -4,17 +4,22 @@ import sys
 import django
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings_testing_final')
 sys.path.insert(0, os.path.dirname(__file__))
 django.setup()
 
 from rest_framework.authtoken.models import Token
 from student_module.models import User
 
-def get_or_create_token():
-    user = User.objects.filter(username='test_dailywage').first()
+def get_or_create_token(username=None):
+    if username is None and len(sys.argv) > 1:
+        username = sys.argv[1]
+    else:
+        username = 'test_dailywage'  # default
+
+    user = User.objects.filter(username=username).first()
     if not user:
-        print("User not found")
+        print(f"User {username} not found")
         return None
 
     token, created = Token.objects.get_or_create(user=user)

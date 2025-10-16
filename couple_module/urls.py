@@ -24,6 +24,6 @@ urlpatterns = [
     path('overview/', CoupleOverviewView.as_view(), name='couple-overview'),
     path('create-couple/', CreateCoupleView.as_view(), name='create-couple'),
 
-    # Include wallet-specific URLs
-    path('', include('couple_module.urls_wallet')),
+    # Include wallet-specific URLs with wallet/ prefix
+    path('wallet/', include('couple_module.urls_wallet')),
 ]

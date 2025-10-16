@@ -12,10 +12,10 @@ from core.throttling import OTPGenerationThrottle, OTPVerificationThrottle, Wall
 from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
+from decimal import Decimal
 from .models_wallet import CoupleWallet, CoupleWalletTransaction, CoupleWalletOTPRequest
 from django.db.models import Sum
 from django.utils import timezone
-from decimal import Decimal
 
 
 class CoupleWalletViewSet(viewsets.ModelViewSet):
@@ -32,9 +32,22 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         )
 
     def get_object(self):
-        return CoupleWallet.objects.get(
-            models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
-        )
+        try:
+            return CoupleWallet.objects.get(
+                models.Q(partner1=self.request.user) | models.Q(partner2=self.request.user)
+            )
+        except CoupleWallet.DoesNotExist:
+            # Auto-create wallet with default values if it doesn't exist
+            wallet = CoupleWallet.objects.create(
+                partner1=self.request.user,
+                partner2=None,  # Will be set when couple is formed
+                balance=Decimal('0.00'),
+                emergency_fund=Decimal('0.00'),
+                joint_goals=Decimal('0.00'),
+                monthly_budget=Decimal('0.00'),
+                is_locked=False
+            )
+            return wallet
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
@@ -66,7 +79,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure deposit to couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount', 0))
             description = request.data.get('description', 'Deposit')
 
             if amount <= 0:
@@ -111,7 +124,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Secure withdrawal from couple wallet"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount', 0))
             description = request.data.get('description', 'Withdrawal')
 
             if amount <= 0:
@@ -156,7 +169,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to emergency fund"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount', 0))
             description = request.data.get('description', 'Emergency Fund Transfer')
 
             if amount <= 0:
@@ -192,7 +205,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         """Transfer money to joint goals"""
         try:
             wallet = self.get_object()
-            amount = Decimal(request.data.get('amount', 0))
+            amount = SecurityUtils.safe_decimal_conversion(request.data.get('amount', 0))
             goal_name = request.data.get('goal_name', 'Joint Goal')
 
             if amount <= 0:
@@ -223,6 +236,20 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
 
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint that logs requests and returns a welcome message"""
+        # Log the request metadata
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path, 'wallet_type': 'couple'}
+        )
+
+        return Response({
+            'message': 'Welcome to the Couple Wallet API Service!'
+        })
 
     @action(detail=False, methods=['get'])
     def monthly_summary(self, request):
@@ -301,6 +328,13 @@ class GenerateCoupleWalletOTPView(APIView):
 
         # Set expiration time (10 minutes from now)
         expires_at = timezone.now() + timezone.timedelta(minutes=10)
+
+        # Validate amount using safe conversion if provided
+        if amount is not None:
+            try:
+                amount = SecurityUtils.safe_decimal_conversion(amount)
+            except ValueError:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
 
         # Create OTP request
         otp_request = CoupleWalletOTPRequest.objects.create(

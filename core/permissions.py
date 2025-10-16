@@ -106,7 +106,7 @@ class OTPGenerationPermission(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        # Allow parents for student OTP and couples for couple wallet OTP
+        # Allow all wallet-owning personas for OTP generation
         allowed_personas = ['PARENT', 'COUPLE', 'STUDENT', 'INDIVIDUAL', 'RETIREE', 'DAILY_WAGE']
         if not hasattr(request.user, 'persona') or request.user.persona not in allowed_personas:
             return False
@@ -125,8 +125,9 @@ class OTPVerificationPermission(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        # Only students can verify OTPs
-        if not hasattr(request.user, 'persona') or request.user.persona != 'STUDENT':
+        # Allow wallet owners to verify their own OTPs
+        allowed_personas = ['PARENT', 'COUPLE', 'STUDENT', 'INDIVIDUAL', 'RETIREE', 'DAILY_WAGE']
+        if not hasattr(request.user, 'persona') or request.user.persona not in allowed_personas:
             return False
 
         return True

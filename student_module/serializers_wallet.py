@@ -3,6 +3,7 @@ Serializers for Student Module wallet functionality.
 """
 from rest_framework import serializers
 from .models import Wallet, OTPRequest, ParentStudentLink
+from decimal import Decimal
 
 
 class StudentWalletSerializer(serializers.ModelSerializer):
@@ -18,19 +19,19 @@ class StudentWalletSerializer(serializers.ModelSerializer):
 
 class StudentWalletDepositSerializer(serializers.Serializer):
     """Serializer for wallet deposit operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Deposit')
 
 
 class StudentWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for wallet withdrawal operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
 
 
 class StudentWalletParentApprovalSerializer(serializers.Serializer):
     """Serializer for parent approval requests."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Transaction request')
 
 

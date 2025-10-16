@@ -15,6 +15,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.mail import send_mail
+from decimal import Decimal, InvalidOperation
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +250,40 @@ class SecurityUtils:
         Log a security-related event.
         """
         logger.info(f"Security Event: {event_type} - User: {user_id} - Details: {details or {}}")
+
+    @staticmethod
+    def safe_decimal_conversion(value, default=Decimal('0.00')):
+        """
+        Safely convert a value to Decimal, handling invalid inputs.
+
+        Args:
+            value: The value to convert to Decimal
+            default: Default value to return if conversion fails
+
+        Returns:
+            Decimal: The converted value or default
+
+        Raises:
+            ValueError: If conversion fails and no default is provided
+        """
+        if value is None:
+            if default is not None:
+                return default
+            raise ValueError("Cannot convert None to Decimal")
+
+        try:
+            # Convert to string first to handle various input types
+            if isinstance(value, str):
+                # Remove any whitespace and common currency symbols
+                cleaned_value = value.strip().replace('$', '').replace(',', '')
+                return Decimal(cleaned_value)
+            else:
+                return Decimal(value)
+        except (InvalidOperation, ValueError, TypeError) as e:
+            logger.warning(f"Failed to convert {value} to Decimal: {e}")
+            if default is not None:
+                return default
+            raise ValueError(f"Invalid decimal value: {value}")
 
 
 class RateLimitService:

@@ -112,6 +112,15 @@ def test_couple_wallet(token):
         print(f"   ✅ Goal transfer successful, new balance: {data.get('new_balance')}")
     time.sleep(1)  # 1 second delay
 
+    # Test welcome endpoint
+    print("   Testing welcome endpoint...")
+    response = requests.get(f"{BASE_URL}/couple/wallet/welcome/", headers=headers)
+    print(f"   GET /couple/wallet/welcome/ - Status: {response.status_code}")
+    if response.status_code == 200:
+        data = response.json()
+        print(f"   ✅ Welcome message: {data.get('message')}")
+    time.sleep(1)  # 1 second delay
+
     # Test monthly summary
     print("   Testing monthly summary...")
     response = requests.get(f"{BASE_URL}/couple/wallet/monthly_summary/", headers=headers)

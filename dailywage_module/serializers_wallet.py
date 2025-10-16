@@ -3,6 +3,7 @@ Serializers for Daily Wage Module wallet functionality.
 """
 from rest_framework import serializers
 from .models_wallet import DailyWageWallet, DailyWageWalletTransaction, DailyWageWalletOTPRequest
+from decimal import Decimal
 
 
 class DailyWageWalletSerializer(serializers.ModelSerializer):
@@ -42,20 +43,20 @@ class DailyWageWalletOTPRequestSerializer(serializers.ModelSerializer):
 
 class DailyWageWalletEarningsSerializer(serializers.Serializer):
     """Serializer for adding daily earnings."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Daily Earnings')
 
 
 class DailyWageWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for wallet withdrawal operations."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
     is_essential = serializers.BooleanField(default=False, required=False)
 
 
 class DailyWageWalletTransferSerializer(serializers.Serializer):
     """Serializer for wallet transfer to emergency reserve."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Emergency Reserve Transfer')
 
 

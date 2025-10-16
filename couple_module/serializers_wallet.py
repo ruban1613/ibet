@@ -40,27 +40,29 @@ class CoupleWalletOTPRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'expires_at']
 
 
+from decimal import Decimal
+
 class CoupleWalletDepositSerializer(serializers.Serializer):
     """Serializer for couple wallet deposit operations."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Joint Deposit')
 
 
 class CoupleWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for couple wallet withdrawal operations."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Joint Withdrawal')
 
 
 class CoupleWalletEmergencyTransferSerializer(serializers.Serializer):
     """Serializer for couple wallet emergency fund transfers."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Emergency Fund Transfer')
 
 
 class CoupleWalletGoalTransferSerializer(serializers.Serializer):
     """Serializer for couple wallet joint goal transfers."""
-    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
     goal_name = serializers.CharField(max_length=100, required=False, default='Joint Goal')
     description = serializers.CharField(max_length=255, required=False, default='Joint Goal Transfer')
 

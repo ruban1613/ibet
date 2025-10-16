@@ -4,6 +4,7 @@ Serializers for Parent Module wallet functionality.
 from rest_framework import serializers
 from .models import ParentOTPRequest, StudentMonitoring
 from student_module.models import Wallet
+from decimal import Decimal
 
 
 class ParentWalletSerializer(serializers.ModelSerializer):
@@ -19,13 +20,13 @@ class ParentWalletSerializer(serializers.ModelSerializer):
 
 class ParentWalletDepositSerializer(serializers.Serializer):
     """Serializer for wallet deposit operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Deposit')
 
 
 class ParentWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for wallet withdrawal operations."""
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     description = serializers.CharField(max_length=255, required=False, default='Withdrawal')
 
 
@@ -49,7 +50,7 @@ class VerifyParentWalletOTPSerializer(serializers.Serializer):
 class StudentWalletApprovalSerializer(serializers.Serializer):
     """Serializer for student wallet approval requests."""
     student_id = serializers.IntegerField()
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     otp_code = serializers.CharField(max_length=6, min_length=6)
 
 
