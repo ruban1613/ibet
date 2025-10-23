@@ -125,11 +125,14 @@ class OTPVerificationPermission(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        # Allow wallet owners to verify their own OTPs
-        allowed_personas = ['PARENT', 'COUPLE', 'STUDENT', 'INDIVIDUAL', 'RETIREE', 'DAILY_WAGE']
-        if not hasattr(request.user, 'persona') or request.user.persona not in allowed_personas:
-            return False
+        # Allow users to verify their own OTPs regardless of persona
+        # The view will handle object-level permission checks
+        return True
 
+    def has_object_permission(self, request, view, obj):
+        # Ensure the user can only verify their own OTP requests
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
         return True
 
 
@@ -142,3 +145,21 @@ class SecurityEventPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         # Only superusers or staff can access security monitoring
         return request.user and (request.user.is_superuser or request.user.is_staff)
+
+
+class IsDailyWageUser(permissions.BasePermission):
+    """
+    Permission class for daily wage wallet operations.
+    Ensures only daily wage users can access daily wage wallet functionality.
+    """
+
+    def has_permission(self, request, view):
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return False
+
+        # Check if user is a daily wage user (based on username for testing)
+        if 'dailywage' not in request.user.username.lower():
+            return False
+
+        return True

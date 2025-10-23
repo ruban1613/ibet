@@ -2,7 +2,7 @@
 Wallet functionality for Retiree Module.
 Provides secure wallet operations with OTP protection and monitoring.
 """
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -28,8 +28,12 @@ class RetireeWallet(models.Model):
     def __str__(self):
         return f"Retiree Wallet: {self.user.username} - Balance: {self.balance}"
 
+    @transaction.atomic
     def deposit_pension(self, amount, description="Pension Deposit"):
         """Deposit pension money to dedicated pension balance"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = RetireeWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Pension deposit amount must be positive")
 
@@ -49,8 +53,12 @@ class RetireeWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def deposit_emergency(self, amount, description="Emergency Fund Deposit"):
         """Deposit money to emergency fund"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = RetireeWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Emergency fund deposit amount must be positive")
 
@@ -70,8 +78,12 @@ class RetireeWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def withdraw(self, amount, description="Withdrawal", use_pension_fund=False):
         """Securely withdraw money from wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = RetireeWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
 

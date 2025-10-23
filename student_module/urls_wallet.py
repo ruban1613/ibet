@@ -10,7 +10,7 @@ from .views_wallet import (
 app_name = 'student_wallet'
 
 router = DefaultRouter()
-router.register(r'wallet', StudentWalletViewSet, basename='student-wallet')
+router.register(r'', StudentWalletViewSet, basename='student-wallet')
 
 urlpatterns = [
     path('', include(router.urls)),

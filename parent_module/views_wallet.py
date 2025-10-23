@@ -13,6 +13,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models import ParentOTPRequest, StudentMonitoring, ParentAlert
+from .serializers_wallet import ParentWalletSerializer
 from student_module.models import Wallet, ParentStudentLink, OTPRequest
 from django.contrib.auth import get_user_model
 
@@ -28,6 +29,7 @@ class ParentWalletViewSet(viewsets.ModelViewSet):
     """
     Secure API endpoint for parent wallet management.
     """
+    serializer_class = ParentWalletSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
 
@@ -54,13 +56,26 @@ class ParentWalletViewSet(viewsets.ModelViewSet):
         except Wallet.DoesNotExist:
             return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for parent wallet"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path}
+        )
+
+        return Response({
+            'message': _('Welcome to the Parent Wallet API Service!')
+        })
+
     @action(detail=False, methods=['post'])
     def deposit(self, request):
         """Secure deposit to wallet"""
         try:
             wallet = self.get_object()
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Deposit')
+            description = request.data.get('description', _('Deposit'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -106,7 +121,7 @@ class ParentWalletViewSet(viewsets.ModelViewSet):
         try:
             wallet = self.get_object()
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
+            description = request.data.get('description', _('Withdrawal'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -300,6 +315,9 @@ class VerifyParentWalletOTPView(APIView):
 
             # Validate OTP using security service
             cache_key = otp_request.cache_key
+            if not cache_key:
+                return Response({'error': _('Invalid OTP request')}, status=status.HTTP_400_BAD_REQUEST)
+
             is_valid, error_message = OTPSecurityService.validate_otp(
                 request.user.id,
                 otp_code,

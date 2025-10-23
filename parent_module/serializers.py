@@ -76,7 +76,7 @@ class StudentWalletAccessSerializer(serializers.Serializer):
     def validate_student_id(self, value):
         request = self.context.get('request')
         if not ParentStudentLink.objects.filter(parent=request.user, student_id=value).exists():
-            raise serializers.ValidationError("You are not linked to this student.")
+            raise serializers.ValidationError(_("You are not linked to this student."))
         return value
 
 
@@ -160,7 +160,7 @@ class GenerateOTPSerializer(serializers.Serializer):
     def validate_student_id(self, value):
         request = self.context.get('request')
         if not ParentStudentLink.objects.filter(parent=request.user, student_id=value).exists():
-            raise serializers.ValidationError("You are not linked to this student.")
+            raise serializers.ValidationError(_("You are not linked to this student."))
         return value
 
 
@@ -171,7 +171,7 @@ class VerifyOTPSerializer(serializers.Serializer):
 
     def validate_otp_code(self, value):
         if len(value) != 6 or not value.isdigit():
-            raise serializers.ValidationError("OTP must be 6 digits.")
+            raise serializers.ValidationError(_("OTP must be 6 digits."))
         return value
 
     def validate_student_id(self, value):

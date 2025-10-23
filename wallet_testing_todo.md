@@ -42,11 +42,11 @@
 - [x] Test invalid input validation
 
 ### 4. Security Features Testing
-- [ ] Test OTP generation limits (rate limiting)
-- [ ] Test OTP verification failures
-- [ ] Test suspicious activity detection
-- [ ] Test authentication bypass attempts
-- [ ] Test unauthorized access attempts
+- [x] Test OTP generation limits (rate limiting) - COMPLETED
+- [x] Test OTP verification failures - COMPLETED
+- [x] Test suspicious activity detection - COMPLETED
+- [x] Test authentication bypass attempts - COMPLETED
+- [x] Test unauthorized access attempts - COMPLETED
 
 ### 5. Edge Cases and Error Testing
 - [ ] Test negative amount inputs
@@ -61,7 +61,8 @@
 
 ### Immediate Tasks
 - [x] Fix remaining WALLET_TRANSFER event types in IBET/couple_module/views_wallet.py
-- [x] Run comprehensive security testing across all modules (in progress - fixing URL issues and wallet creation)
+- [x] Run comprehensive security testing across all modules - COMPLETED
+- [ ] Fix critical security vulnerabilities (see security_fixes_todo.md)
 - [ ] Implement edge case testing for all wallet operations
 - [ ] Create automated test suite for continuous integration
 

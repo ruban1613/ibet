@@ -1,4 +1,4 @@
-""""
+"""
 Complete URL patterns for Couple Module wallet functionality.
 """
 from django.urls import path, include
@@ -9,6 +9,8 @@ from .views_wallet_final import (
     GenerateCoupleWalletOTPView,
     VerifyCoupleWalletOTPView
 )
+
+app_name = 'couple_wallet'
 
 # Create router for couple wallet endpoints
 router = DefaultRouter()

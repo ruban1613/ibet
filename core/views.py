@@ -7,6 +7,30 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
 
+@api_view(['GET'])
+def api_root(request):
+    """
+    Root API endpoint that provides information about available endpoints.
+    """
+    return Response({
+        'message': 'Welcome to IBET Wallet API',
+        'version': '1.0.0',
+        'endpoints': {
+            'auth': '/api/auth/',
+            'student': '/api/',
+            'parent': '/api/parent/',
+            'individual': '/api/individual/',
+            'couple': '/api/couple/',
+            'retiree': '/api/retiree/',
+            'dailywage': '/api/dailywage/',
+            'token_auth': '/api/token-auth/',
+            'set_language': '/api/set-language/',
+            'languages': '/api/languages/',
+        },
+        'documentation': 'API documentation available at /admin/ (admin access required)'
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def set_language(request):

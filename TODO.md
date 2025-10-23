@@ -1,25 +1,19 @@
-# TODO: Add alert_threshold field to CoupleWallet model
+# Internationalization Implementation for couple_module/views_wallet.py
 
-## Steps to complete:
+## Current Task: Wrap hardcoded strings in couple_module/views_wallet.py
 
-1. **Edit models_wallet.py**: Add the `alert_threshold` field to the `CoupleWallet` model in `couple_module/models_wallet.py`.
-   - Field: `alert_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Threshold for low balance alerts")`
-   - Place it after the existing fields, before the Meta class.
-   - [x] Completed: Field added successfully.
+### Information Gathered
+- File already has `from django.utils.translation import gettext_lazy as _` import
+- Many strings are already wrapped with `_()`
+- Identified remaining hardcoded strings that need wrapping
 
-2. **Create Django migration**: Run `python manage.py makemigrations couple_module` to generate the migration file for the new field.
-   - [x] Completed: Migration 0004_couplewallet_alert_threshold_and_more.py created successfully.
+### Plan
+- Wrap hardcoded strings in deposit, withdraw, transfer_to_emergency, transfer_to_goals methods
+- Ensure all user-facing strings are translatable
 
-3. **Apply migration**: Run `python manage.py migrate couple_module` to update the database schema.
-   - [x] Completed: Migration applied successfully.
+### Dependent Files to be edited
+- ibet/IBET/couple_module/views_wallet.py
 
-4. **Verify the change**:
-   - Check the migration file in `couple_module/migrations/` to confirm it adds the field.
-   - Optionally, inspect the database or run a test to ensure the field is added.
-   - [x] Completed: Migration file confirmed to add alert_threshold field correctly.
-
-5. **Update documentation or tests if needed**: Review if any views, forms, or tests need updates to use the new field (none identified in plan).
-   - [x] Completed: No updates needed.
-
-6. **Mark task complete**: Update this TODO.md with completion status and close the task.
-   - [x] Completed: Task fully implemented.
+### Followup steps
+- Verify all strings are properly wrapped
+- Test that translations work correctly

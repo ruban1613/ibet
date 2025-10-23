@@ -12,7 +12,13 @@ TOKENS = {
 }
 
 def test_endpoint(module, endpoint, token):
-    url = f"{BASE_URL}/api/{module}/wallet/{endpoint}/"
+    # Construct URL based on module-specific routing
+    if module == 'individual':
+        url = f"{BASE_URL}/api/{module}/balance/"
+    elif module == 'couple':
+        url = f"{BASE_URL}/api/{module}/wallet/balance/"
+    else:  # dailywage
+        url = f"{BASE_URL}/api/{module}/balance/"
     headers = {"Authorization": f"Token {token}"}
     try:
         response = requests.get(url, headers=headers)

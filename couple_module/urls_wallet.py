@@ -16,6 +16,9 @@ router.register(r'', CoupleWalletViewSet, basename='couple-wallet')
 router.register(r'transactions', CoupleWalletTransactionViewSet, basename='couple-wallet-transactions')
 
 urlpatterns = [
+    # Balance endpoint (placed before router to avoid conflict)
+    path('balance/', CoupleWalletViewSet.as_view({'get': 'balance'}), name='couple-wallet-balance'),
+
     # OTP endpoints (placed before router to avoid conflict)
     path('generate-otp/', GenerateCoupleWalletOTPView.as_view(), name='generate-couple-wallet-otp'),
     path('verify-otp/', VerifyCoupleWalletOTPView.as_view(), name='verify-couple-wallet-otp'),

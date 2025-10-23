@@ -470,6 +470,26 @@ msgid ""
 "directly."
 msgstr ""
 
+#: .\parent_module\serializers.py:15
+msgid "Student ID is required."
+msgstr ""
+
+#: .\parent_module\serializers.py:20
+msgid "Invalid student ID."
+msgstr ""
+
+#: .\parent_module\serializers.py:35
+msgid "OTP code is required."
+msgstr ""
+
+#: .\parent_module\serializers.py:40
+msgid "Invalid OTP code."
+msgstr ""
+
+#: .\parent_module\serializers.py:45
+msgid "OTP request not found."
+msgstr ""
+
 #: .\retiree_module\models_wallet.py:127
 msgid "Pension Deposit"
 msgstr ""

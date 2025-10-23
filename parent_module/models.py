@@ -85,17 +85,23 @@ class ParentOTPRequest(models.Model):
         EXPIRED = 'EXPIRED', _('Expired')
 
     parent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='otp_requests')
-    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_otps')
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_otps', null=True, blank=True)
     otp_code = models.CharField(max_length=6)
-    amount_requested = models.DecimalField(max_digits=10, decimal_places=2)
-    reason = models.CharField(max_length=255)
+    amount_requested = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    reason = models.CharField(max_length=255, null=True, blank=True)
     status = models.CharField(max_length=10, choices=OTPStatus.choices, default=OTPStatus.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
+    operation_type = models.CharField(max_length=50, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    cache_key = models.CharField(max_length=255, null=True, blank=True)
+    is_used = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"OTP {self.otp_code} for {self.parent.username} -> {self.student.username}"
+        student_name = self.student.username if self.student else "General"
+        return f"OTP {self.otp_code} for {self.parent.username} -> {student_name}"
 
     def is_expired(self):
         from django.utils import timezone

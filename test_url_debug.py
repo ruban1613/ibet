@@ -52,11 +52,11 @@ def test_urls():
             response = client.get(endpoint)
             print(f"  Status: {response.status_code}")
             if response.status_code == 404:
-                print("  ✗ 404 Not Found - URL pattern not matched"
+                print("  ✗ 404 Not Found - URL pattern not matched")
             elif response.status_code == 200:
-                print("  ✓ 200 OK - Endpoint found"
+                print("  ✓ 200 OK - Endpoint found")
             elif response.status_code == 401:
-                print("  ⚠ 401 Unauthorized - Authentication required"
+                print("  ⚠ 401 Unauthorized - Authentication required")
             else:
                 print(f"  ? {response.status_code} - Other status")
         except Exception as e:

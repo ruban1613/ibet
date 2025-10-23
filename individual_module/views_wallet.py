@@ -12,7 +12,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import IndividualWallet, IndividualWalletTransaction, IndividualWalletOTPRequest
-from .serializers_wallet import IndividualWalletTransactionSerializer
+from .serializers_wallet import IndividualWalletSerializer, IndividualWalletTransactionSerializer
 from django.db.models import Sum
 from django.utils import timezone
 from decimal import Decimal
@@ -24,29 +24,30 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
-    serializer_class = None  # Not used for actions
+    serializer_class = IndividualWalletSerializer
 
     def get_queryset(self):
         return IndividualWallet.objects.filter(user=self.request.user)
 
     def get_object(self):
-        return IndividualWallet.objects.get(user=self.request.user)
+        try:
+            return IndividualWallet.objects.get(user=self.request.user)
+        except IndividualWallet.DoesNotExist:
+            raise IndividualWallet.DoesNotExist("Individual wallet not found")
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
         """Get wallet balance securely"""
-        try:
-            wallet = self.get_object()
-        except IndividualWallet.DoesNotExist:
-            # Create wallet if it doesn't exist
-            wallet = IndividualWallet.objects.create(
-                user=request.user,
-                balance=Decimal('0.00'),
-                monthly_budget=Decimal('0.00'),
-                savings_goal=Decimal('0.00'),
-                current_savings=Decimal('0.00'),
-                alert_threshold=Decimal('0.00')
-            )
+        wallet, created = IndividualWallet.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'balance': Decimal('0.00'),
+                'monthly_budget': Decimal('0.00'),
+                'savings_goal': Decimal('0.00'),
+                'current_savings': Decimal('0.00'),
+                'alert_threshold': Decimal('0.00')
+            }
+        )
 
         SecurityEventManager.log_event(
             SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
@@ -61,25 +62,40 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
             'last_transaction_at': wallet.last_transaction_at
         })
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for individual wallet"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path}
+        )
+
+        return Response({
+            'message': _('Welcome to the Individual Wallet API Service!')
+        })
+
     @action(detail=False, methods=['post'])
     def deposit(self, request):
         """Secure deposit to wallet"""
         try:
-            try:
-                wallet = self.get_object()
-            except IndividualWallet.DoesNotExist:
-                # Create wallet if it doesn't exist
-                wallet = IndividualWallet.objects.create(
-                    user=request.user,
-                    balance=Decimal('0.00'),
-                    monthly_budget=Decimal('0.00'),
-                    savings_goal=Decimal('0.00'),
-                    current_savings=Decimal('0.00'),
-                    alert_threshold=Decimal('0.00')
-                )
+            wallet, created = IndividualWallet.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'balance': Decimal('0.00'),
+                    'monthly_budget': Decimal('0.00'),
+                    'savings_goal': Decimal('0.00'),
+                    'current_savings': Decimal('0.00'),
+                    'alert_threshold': Decimal('0.00')
+                }
+            )
 
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Deposit')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+            description = request.data.get('description', _('Deposit'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -121,21 +137,23 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     def withdraw(self, request):
         """Secure withdrawal from wallet"""
         try:
-            try:
-                wallet = self.get_object()
-            except IndividualWallet.DoesNotExist:
-                # Create wallet if it doesn't exist
-                wallet = IndividualWallet.objects.create(
-                    user=request.user,
-                    balance=Decimal('0.00'),
-                    monthly_budget=Decimal('0.00'),
-                    savings_goal=Decimal('0.00'),
-                    current_savings=Decimal('0.00'),
-                    alert_threshold=Decimal('0.00')
-                )
+            wallet, created = IndividualWallet.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'balance': Decimal('0.00'),
+                    'monthly_budget': Decimal('0.00'),
+                    'savings_goal': Decimal('0.00'),
+                    'current_savings': Decimal('0.00'),
+                    'alert_threshold': Decimal('0.00')
+                }
+            )
 
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+            description = request.data.get('description', _('Withdrawal'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -177,24 +195,35 @@ class IndividualWalletViewSet(viewsets.ModelViewSet):
     def transfer_to_goal(self, request):
         """Transfer money to savings goal"""
         try:
-            try:
-                wallet = self.get_object()
-            except IndividualWallet.DoesNotExist:
-                # Create wallet if it doesn't exist
-                wallet = IndividualWallet.objects.create(
-                    user=request.user,
-                    balance=Decimal('0.00'),
-                    monthly_budget=Decimal('0.00'),
-                    savings_goal=Decimal('0.00'),
-                    current_savings=Decimal('0.00'),
-                    alert_threshold=Decimal('0.00')
-                )
+            wallet, created = IndividualWallet.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'balance': Decimal('0.00'),
+                    'monthly_budget': Decimal('0.00'),
+                    'savings_goal': Decimal('0.00'),
+                    'current_savings': Decimal('0.00'),
+                    'alert_threshold': Decimal('0.00')
+                }
+            )
 
-            amount = Decimal(request.data.get('amount', 0))
-            goal_name = request.data.get('goal_name', 'Savings Goal')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+            goal_name = request.data.get('goal_name', _('Savings Goal'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'individual_goal_transfer', threshold=3, time_window_minutes=15
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
 
             new_balance = wallet.transfer_to_goal(amount, goal_name)
 
@@ -331,7 +360,7 @@ class VerifyIndividualWalletOTPView(APIView):
                 return Response({'error': _('OTP has expired')}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate OTP using security service
-            cache_key = f"otp_request_{otp_request.id}"
+            cache_key = otp_request.cache_key
             is_valid, error_message = OTPSecurityService.validate_otp(
                 request.user.id,
                 otp_code,

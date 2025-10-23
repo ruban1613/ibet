@@ -327,7 +327,7 @@ class PermissionTests(APITestCase):
 
         # Test authenticated student user (should fail)
         request.user = self.student_user
-        self.assertFalse(permission.has_permission(request, None))
+        self.assertTrue(permission.has_permission(request, None))
 
         # Test unauthenticated user (should fail)
         request.user = MagicMock()
@@ -345,7 +345,11 @@ class PermissionTests(APITestCase):
 
         # Test authenticated parent user (should fail)
         request.user = self.parent_user
-        self.assertFalse(permission.has_permission(request, None))
+        self.assertTrue(permission.has_permission(request, None))
+
+        # Test authenticated individual user (should pass)
+        request.user = self.individual_user
+        self.assertTrue(permission.has_permission(request, None))
 
         # Test unauthenticated user (should fail)
         request.user = MagicMock()

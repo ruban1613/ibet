@@ -2,6 +2,7 @@
 Serializers for Couple Module wallet functionality.
 """
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from .models_wallet import CoupleWallet, CoupleWalletTransaction, CoupleWalletOTPRequest
 
 
@@ -45,35 +46,35 @@ from decimal import Decimal
 class CoupleWalletDepositSerializer(serializers.Serializer):
     """Serializer for couple wallet deposit operations."""
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
-    description = serializers.CharField(max_length=255, required=False, default='Joint Deposit')
+    description = serializers.CharField(max_length=255, required=False, default=_('Joint Deposit'))
 
 
 class CoupleWalletWithdrawalSerializer(serializers.Serializer):
     """Serializer for couple wallet withdrawal operations."""
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
-    description = serializers.CharField(max_length=255, required=False, default='Joint Withdrawal')
+    description = serializers.CharField(max_length=255, required=False, default=_('Joint Withdrawal'))
 
 
 class CoupleWalletEmergencyTransferSerializer(serializers.Serializer):
     """Serializer for couple wallet emergency fund transfers."""
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
-    description = serializers.CharField(max_length=255, required=False, default='Emergency Fund Transfer')
+    description = serializers.CharField(max_length=255, required=False, default=_('Emergency Fund Transfer'))
 
 
 class CoupleWalletGoalTransferSerializer(serializers.Serializer):
     """Serializer for couple wallet joint goal transfers."""
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0.01'))
-    goal_name = serializers.CharField(max_length=100, required=False, default='Joint Goal')
-    description = serializers.CharField(max_length=255, required=False, default='Joint Goal Transfer')
+    goal_name = serializers.CharField(max_length=100, required=False, default=_('Joint Goal'))
+    description = serializers.CharField(max_length=255, required=False, default=_('Joint Goal Transfer'))
 
 
 class GenerateCoupleWalletOTPSerializer(serializers.Serializer):
     """Serializer for generating OTP for couple wallet operations."""
     operation_type = serializers.ChoiceField(choices=[
-        ('deposit', 'Joint Deposit'),
-        ('withdrawal', 'Joint Withdrawal'),
-        ('emergency_transfer', 'Emergency Fund Transfer'),
-        ('goal_transfer', 'Joint Goal Transfer'),
+        ('deposit', _('Joint Deposit')),
+        ('withdrawal', _('Joint Withdrawal')),
+        ('emergency_transfer', _('Emergency Fund Transfer')),
+        ('goal_transfer', _('Joint Goal Transfer')),
     ])
     amount = serializers.DecimalField(max_digits=8, decimal_places=2, required=False)
     description = serializers.CharField(max_length=255, required=False)

@@ -99,6 +99,10 @@ class OTPSecurityService:
         if email:
             cls.send_otp_via_email(otp_code, email, purpose)
 
+        # For testing purposes, print the OTP (remove in production)
+        if settings.DEBUG:
+            print(f"DEBUG: Generated OTP for {email}: {otp_code}")
+
         logger.info(f"Created OTP request for user {user_id}, purpose: {purpose}")
 
         return {

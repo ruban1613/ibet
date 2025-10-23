@@ -2,7 +2,7 @@
 Wallet functionality for Couple Module.
 Provides secure shared wallet operations with OTP protection and monitoring.
 """
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -32,8 +32,12 @@ class CoupleWallet(models.Model):
     def __str__(self):
         return f"Couple Wallet: {self.partner1.username} & {self.partner2.username} - Balance: {self.balance}"
 
+    @transaction.atomic
     def deposit(self, amount, description="Deposit", deposited_by=None):
         """Securely deposit money to shared wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = CoupleWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Deposit amount must be positive")
 
@@ -52,8 +56,12 @@ class CoupleWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def withdraw(self, amount, description="Withdrawal", withdrawn_by=None):
         """Securely withdraw money from shared wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = CoupleWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
 
@@ -78,8 +86,12 @@ class CoupleWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def transfer_to_emergency(self, amount, description="Emergency Fund Transfer"):
         """Transfer money to emergency fund"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = CoupleWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Transfer amount must be positive")
 
@@ -102,8 +114,12 @@ class CoupleWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def transfer_to_goals(self, amount, goal_name="Joint Goal"):
         """Transfer money to joint goals"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = CoupleWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Transfer amount must be positive")
 

@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from .models import IncomeSource, EmergencyFund, FinancialGoal, ExpenseAlert
-from student_module.models import Wallet
+from .models_wallet import IndividualWallet
 
 User = get_user_model()
 
@@ -100,13 +100,10 @@ class IndividualModuleAPITestCase(APITestCase):
 
     def test_wallet_management(self):
         """Test wallet management operations"""
-        # Create wallet first
-        Wallet.objects.create(user=self.user, balance=1000.00)
+        # Create IndividualWallet instead of Wallet
+        IndividualWallet.objects.create(user=self.user, balance=1000.00)
 
-        url = reverse('wallet-management')
-        response = self.client.post(url, {'amount': 500.00})
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Check wallet balance updated
-        wallet = Wallet.objects.get(user=self.user)
-        self.assertEqual(wallet.balance, 1500.00)
+        url = reverse('individual_wallet:individual-wallet-balance')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(str(response.data['balance']), '1000.00')

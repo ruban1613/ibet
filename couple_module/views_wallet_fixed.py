@@ -254,6 +254,16 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
         except CoupleWallet.DoesNotExist:
             return Response({'error': _('Couple wallet not found')}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for couple wallet API"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['API_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path, 'wallet_type': 'couple'}
+        )
+        return Response({'message': 'Welcome to the Couple Wallet API Service!'})
+
 
 class CoupleWalletTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     """

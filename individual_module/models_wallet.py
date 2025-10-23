@@ -2,7 +2,7 @@
 Wallet functionality for Individual Module.
 Provides secure wallet operations with OTP protection and monitoring.
 """
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -28,8 +28,12 @@ class IndividualWallet(models.Model):
     def __str__(self):
         return f"Individual Wallet: {self.user.username} - Balance: {self.balance}"
 
+    @transaction.atomic
     def deposit(self, amount, description="Deposit"):
         """Securely deposit money to wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = IndividualWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Deposit amount must be positive")
 
@@ -47,8 +51,12 @@ class IndividualWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def withdraw(self, amount, description="Withdrawal"):
         """Securely withdraw money from wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = IndividualWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
 
@@ -72,8 +80,12 @@ class IndividualWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def transfer_to_goal(self, amount, goal_name):
         """Transfer money to savings goal"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = IndividualWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Transfer amount must be positive")
 

@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.db import models
 from core.throttling import OTPGenerationThrottle, OTPVerificationThrottle, WalletAccessThrottle, SensitiveOperationsThrottle
 from core.security import OTPSecurityService, SecurityUtils
-from core.security_monitoring import SecurityEventManager, AuditService
+from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import RetireeWallet, RetireeWalletTransaction, RetireeWalletOTPRequest
 from .serializers_wallet import RetireeWalletSerializer, RetireeWalletTransactionSerializer
@@ -31,7 +31,10 @@ class RetireeWalletViewSet(viewsets.ModelViewSet):
         return RetireeWallet.objects.filter(user=self.request.user)
 
     def get_object(self):
-        return RetireeWallet.objects.get(user=self.request.user)
+        try:
+            return RetireeWallet.objects.get(user=self.request.user)
+        except RetireeWallet.DoesNotExist:
+            raise RetireeWallet.DoesNotExist(_("Retiree wallet not found"))
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
@@ -56,13 +59,92 @@ class RetireeWalletViewSet(viewsets.ModelViewSet):
         except RetireeWallet.DoesNotExist:
             return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for retiree wallet"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path}
+        )
+
+        return Response({
+            'message': _('Welcome to the Retiree Wallet API Service!')
+        })
+
+    @action(detail=False, methods=['post'])
+    def deposit(self, request):
+        """Secure deposit to wallet"""
+        try:
+            try:
+                wallet = self.get_object()
+            except RetireeWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = RetireeWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    pension_balance=Decimal('0.00'),
+                    emergency_fund=Decimal('0.00'),
+                    monthly_expense_limit=Decimal('5000.00')
+                )
+
+            amount = Decimal(request.data.get('amount', 0))
+            description = request.data.get('description', _('Deposit'))
+
+            if amount <= 0:
+                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'wallet_deposit', threshold=5, time_window_minutes=30
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            new_balance = wallet.deposit_pension(amount, description)
+
+            # Audit the operation
+            AuditService.audit_wallet_operation(
+                request.user.id,
+                'deposit',
+                amount,
+                {'description': description}
+            )
+
+            SecurityEventManager.log_event(
+                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                request.user.id,
+                {'amount': amount, 'new_balance': new_balance, 'transfer_type': 'credit'}
+            )
+
+            return Response({
+                'message': _('Deposit successful'),
+                'new_balance': new_balance
+            })
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post'])
     def deposit_pension(self, request):
         """Secure pension deposit to wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except RetireeWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = RetireeWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    pension_balance=Decimal('0.00'),
+                    emergency_fund=Decimal('0.00'),
+                    monthly_expense_limit=Decimal('5000.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Pension Deposit')
+            description = request.data.get('description', _('Pension Deposit'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -105,9 +187,20 @@ class RetireeWalletViewSet(viewsets.ModelViewSet):
     def deposit_emergency(self, request):
         """Secure emergency fund deposit to wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except RetireeWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = RetireeWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    pension_balance=Decimal('0.00'),
+                    emergency_fund=Decimal('0.00'),
+                    monthly_expense_limit=Decimal('5000.00')
+                )
+
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Emergency Fund Deposit')
+            description = request.data.get('description', _('Emergency Fund Deposit'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -141,9 +234,13 @@ class RetireeWalletViewSet(viewsets.ModelViewSet):
     def withdraw(self, request):
         """Secure withdrawal from wallet"""
         try:
-            wallet = self.get_object()
+            try:
+                wallet = self.get_object()
+            except RetireeWallet.DoesNotExist:
+                return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
+
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
+            description = request.data.get('description', _('Withdrawal'))
             use_pension_fund = request.data.get('use_pension_fund', False)
 
             if amount <= 0:

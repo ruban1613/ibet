@@ -9,8 +9,8 @@ from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
 from core.throttling import OTPGenerationThrottle, OTPVerificationThrottle, WalletAccessThrottle, SensitiveOperationsThrottle
 from core.security import OTPSecurityService, SecurityUtils
-from core.security_monitoring import SecurityEventManager, AuditService
-from core.permissions import OTPGenerationPermission, OTPVerificationPermission
+from core.security_monitoring_fixed import SecurityEventManager, AuditService
+from core.permissions import OTPGenerationPermission, OTPVerificationPermission, IsDailyWageUser
 from .models_wallet import DailyWageWallet, DailyWageWalletTransaction, DailyWageWalletOTPRequest
 from .serializers_wallet import DailyWageWalletSerializer, DailyWageWalletTransactionSerializer
 from django.db import models
@@ -24,14 +24,17 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
     Secure API endpoint for daily wage wallet management.
     """
     serializer_class = DailyWageWalletSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsDailyWageUser]
     throttle_classes = [WalletAccessThrottle]
 
     def get_queryset(self):
         return DailyWageWallet.objects.filter(user=self.request.user)
 
     def get_object(self):
-        return DailyWageWallet.objects.get(user=self.request.user)
+        try:
+            return DailyWageWallet.objects.get(user=self.request.user)
+        except DailyWageWallet.DoesNotExist:
+            raise DailyWageWallet.DoesNotExist("Daily wage wallet not found")
 
     @action(detail=False, methods=['get'])
     def balance(self, request):
@@ -67,6 +70,80 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
             'last_transaction_at': wallet.last_transaction_at
         })
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for daily wage wallet"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path}
+        )
+
+        return Response({
+            'message': _('Welcome to the Daily Wage Wallet API Service!')
+        })
+
+    @action(detail=False, methods=['post'])
+    def deposit(self, request):
+        """Secure deposit to wallet"""
+        try:
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+
+            description = request.data.get('description', _('Deposit'))
+
+            if amount <= 0:
+                return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for suspicious activity
+            if SecurityEventManager.detect_suspicious_activity(
+                request.user.id, 'wallet_deposit', threshold=5, time_window_minutes=30
+            ):
+                return Response(
+                    {'error': _('Suspicious activity detected')},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            new_balance = wallet.add_daily_earnings(amount, description)
+
+            # Audit the operation
+            AuditService.audit_wallet_operation(
+                request.user.id,
+                'deposit',
+                amount,
+                {'description': description}
+            )
+
+            SecurityEventManager.log_event(
+                SecurityEventManager.EVENT_TYPES['FUND_TRANSFER'],
+                request.user.id,
+                {'amount': amount, 'new_balance': new_balance, 'transfer_type': 'credit'}
+            )
+
+            return Response({
+                'message': _('Deposit successful'),
+                'new_balance': new_balance
+            })
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post'])
     def add_earnings(self, request):
         """Securely add daily earnings to wallet"""
@@ -84,8 +161,13 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
                     monthly_goal=Decimal('0.00')
                 )
 
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Daily Earnings')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+
+            description = request.data.get('description', _('Daily Earnings'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -142,8 +224,13 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
                     monthly_goal=Decimal('0.00')
                 )
 
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+
+            description = request.data.get('description', _('Withdrawal'))
             is_essential = request.data.get('is_essential', False)
 
             if amount <= 0:
@@ -199,8 +286,13 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
                     monthly_goal=Decimal('0.00')
                 )
 
-            amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Emergency Reserve Transfer')
+            amount_raw = request.data.get('amount', 0)
+            try:
+                amount = Decimal(amount_raw)
+            except Exception:
+                return Response({'error': _('Invalid amount format')}, status=status.HTTP_400_BAD_REQUEST)
+
+            description = request.data.get('description', _('Emergency Reserve Transfer'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -274,7 +366,64 @@ class DailyWageWalletViewSet(viewsets.ModelViewSet):
                 'non_essential_expenses': expenses['non_essential'] or Decimal('0.00'),
                 'weekly_target': wallet.weekly_target,
                 'progress_percentage': wallet.weekly_progress,
-                'remaining_target': wallet.weekly_target - earnings
+                'remaining_target': wallet.weekly_target - earnings,
+                'alert_triggered': wallet.balance < wallet.alert_threshold
+            })
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def monthly_summary(self, request):
+        """Get monthly earnings and expense summary"""
+        try:
+            try:
+                wallet = self.get_object()
+            except DailyWageWallet.DoesNotExist:
+                # Create wallet if it doesn't exist
+                wallet = DailyWageWallet.objects.create(
+                    user=request.user,
+                    balance=Decimal('0.00'),
+                    daily_earnings=Decimal('0.00'),
+                    emergency_reserve=Decimal('0.00'),
+                    weekly_target=Decimal('0.00'),
+                    monthly_goal=Decimal('0.00')
+                )
+
+            current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+            # Get monthly earnings
+            earnings = DailyWageWalletTransaction.objects.filter(
+                wallet=wallet,
+                transaction_type='DAILY_EARNINGS',
+                created_at__gte=current_month_start
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+            # Get monthly expenses
+            expenses = DailyWageWalletTransaction.objects.filter(
+                wallet=wallet,
+                transaction_type='WITHDRAWAL',
+                created_at__gte=current_month_start
+            ).aggregate(
+                total=Sum('amount'),
+                essential=Sum('amount', filter=models.Q(is_essential_expense=True)),
+                non_essential=Sum('amount', filter=models.Q(is_essential_expense=False))
+            )
+
+            # Calculate monthly progress percentage
+            progress_percentage = 0
+            if wallet.monthly_goal > 0:
+                progress_percentage = min((earnings / wallet.monthly_goal) * 100, 100)
+
+            return Response({
+                'monthly_earnings': earnings,
+                'monthly_expenses': expenses['total'] or Decimal('0.00'),
+                'essential_expenses': expenses['essential'] or Decimal('0.00'),
+                'non_essential_expenses': expenses['non_essential'] or Decimal('0.00'),
+                'monthly_goal': wallet.monthly_goal,
+                'progress_percentage': progress_percentage,
+                'remaining_goal': wallet.monthly_goal - earnings,
+                'alert_triggered': wallet.balance < wallet.alert_threshold
             })
 
         except Exception as e:
@@ -307,6 +456,15 @@ class GenerateDailyWageWalletOTPView(APIView):
 
         if not operation_type:
             return Response({'error': _('Operation type is required')}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Implement rate limiting check here (additional to throttle_classes)
+        user = request.user
+        from django.core.cache import cache
+        cache_key = f"otp_gen_limit_{user.id}"
+        count = cache.get(cache_key, 0)
+        if count >= 5:
+            return Response({'error': _('OTP generation rate limit exceeded')}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        cache.set(cache_key, count + 1, timeout=3600)  # 1 hour window
 
         # Generate secure OTP
         otp_request_data = OTPSecurityService.create_otp_request(

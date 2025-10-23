@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
 from core.throttling import OTPGenerationThrottle, OTPVerificationThrottle, WalletAccessThrottle, SensitiveOperationsThrottle
 from core.security import OTPSecurityService, SecurityUtils
-from core.security_monitoring import SecurityEventManager, AuditService
+from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models import Wallet, OTPRequest, ParentStudentLink
 from django.db.models import Sum
@@ -49,13 +49,26 @@ class StudentWalletViewSet(viewsets.ModelViewSet):
         except Wallet.DoesNotExist:
             return Response({'error': _('Wallet not found')}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'])
+    def welcome(self, request):
+        """Welcome endpoint for student wallet"""
+        SecurityEventManager.log_event(
+            SecurityEventManager.EVENT_TYPES['WALLET_ACCESS'],
+            request.user.id,
+            {'action': 'welcome', 'method': request.method, 'path': request.path}
+        )
+
+        return Response({
+            'message': _('Welcome to the Student Wallet API Service!')
+        })
+
     @action(detail=False, methods=['post'])
     def deposit(self, request):
         """Secure deposit to wallet"""
         try:
             wallet = self.get_object()
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Deposit')
+            description = request.data.get('description', _('Deposit'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -101,7 +114,7 @@ class StudentWalletViewSet(viewsets.ModelViewSet):
         try:
             wallet = self.get_object()
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Withdrawal')
+            description = request.data.get('description', _('Withdrawal'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)
@@ -151,7 +164,7 @@ class StudentWalletViewSet(viewsets.ModelViewSet):
         """Request parent approval for a transaction"""
         try:
             amount = Decimal(request.data.get('amount', 0))
-            description = request.data.get('description', 'Transaction request')
+            description = request.data.get('description', _('Transaction request'))
 
             if amount <= 0:
                 return Response({'error': _('Invalid amount')}, status=status.HTTP_400_BAD_REQUEST)

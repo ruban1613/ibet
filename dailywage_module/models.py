@@ -110,12 +110,23 @@ class ExpenseTrackingTranslationOptions(TranslationOptions):
 # Translation options are now in translation.py
 
 class UserProfile(models.Model):
+    PERSONA_CHOICES = [
+        ('INDIVIDUAL', 'Individual'),
+        ('COUPLE', 'Couple'),
+        ('PARENT', 'Parent'),
+        ('STUDENT', 'Student'),
+        ('DAILY_WAGE', 'Daily Wage Worker'),
+        ('RETIREE', 'Retiree'),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     name = models.CharField(max_length=100, verbose_name=_("Name"), help_text=_("Enter your name"))
     bio = models.TextField(blank=True, verbose_name=_("Bio"), help_text=_("Tell us about yourself"))
     location = models.CharField(max_length=100, blank=True, verbose_name=_("Location"), help_text=_("Where are you based?"))
     birth_date = models.DateField(null=True, blank=True, verbose_name=_("Birth Date"), help_text=_("When is your birthday?"))
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True, verbose_name=_("Profile Picture"))
+    phone = models.CharField(max_length=20, blank=True, verbose_name=_("Phone"), help_text=_("Enter your phone number"))
+    persona = models.CharField(max_length=20, choices=PERSONA_CHOICES, default='INDIVIDUAL', verbose_name=_("Account Type"), help_text=_("Select your account type"))
 
     def __str__(self):
         return f"{self.user.username}'s profile"

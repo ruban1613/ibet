@@ -2,7 +2,7 @@
 Wallet functionality for Daily Wage Module.
 Provides secure wallet operations with OTP protection and monitoring.
 """
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -29,8 +29,12 @@ class DailyWageWallet(models.Model):
     def __str__(self):
         return f"Daily Wage Wallet: {self.user.username} - Balance: {self.balance}"
 
+    @transaction.atomic
     def add_daily_earnings(self, amount, description="Daily Earnings"):
         """Add daily earnings to wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = DailyWageWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Daily earnings amount must be positive")
 
@@ -50,8 +54,12 @@ class DailyWageWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def withdraw(self, amount, description="Withdrawal", is_essential=False):
         """Securely withdraw money from wallet"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = DailyWageWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
 
@@ -80,8 +88,12 @@ class DailyWageWallet(models.Model):
         )
         return self.balance
 
+    @transaction.atomic
     def transfer_to_emergency(self, amount, description="Emergency Reserve Transfer"):
         """Transfer money to emergency reserve"""
+        # Lock the wallet row for the duration of the transaction
+        wallet = DailyWageWallet.objects.select_for_update().get(pk=self.pk)
+
         if amount <= 0:
             raise ValueError("Transfer amount must be positive")
 
