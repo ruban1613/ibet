@@ -3,6 +3,10 @@
 ## Overview
 This TODO file tracks all testing tasks for the IBET wallet system. It includes completed tasks, current issues, and remaining work to ensure the system is fully tested and error-free.
 
+# couple_module/urls.py
+path('wallet/', include('couple_module.urls_wallet')),
+# core/urls.py
+path('api/couple/', include('couple_module.urls')),
 **CRITICAL NOTE:** There are significant contradictions between this document and others (e.g., `WALLET_SECURITY_STATUS_REPORT.md`, `TODO_final_testing.md`) regarding the resolution of critical issues. This document reflects the current state of *failing tests* which must be addressed before the project can be considered stable or production-ready.
 
 ## Completed Tasks (Marked with [x])

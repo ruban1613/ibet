@@ -13,6 +13,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models_wallet import CoupleWallet, CoupleWalletTransaction, CoupleWalletOTPRequest
+from .serializers_wallet import CoupleWalletSerializer
 from django.db.models import Sum, Q, Count
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
@@ -40,6 +41,7 @@ class CoupleWalletViewSet(viewsets.ModelViewSet):
     """
     Secure API endpoint for couple wallet management.
     """
+    serializer_class = CoupleWalletSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
 

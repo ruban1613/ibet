@@ -12,6 +12,7 @@ from core.security import OTPSecurityService, SecurityUtils
 from core.security_monitoring_fixed import SecurityEventManager, AuditService
 from core.permissions import OTPGenerationPermission, OTPVerificationPermission
 from .models import Wallet, OTPRequest, ParentStudentLink
+from .serializers_wallet import StudentWalletSerializer
 from django.db.models import Sum
 from django.utils import timezone
 from decimal import Decimal
@@ -21,6 +22,7 @@ class StudentWalletViewSet(viewsets.ModelViewSet):
     """
     Secure API endpoint for student wallet management.
     """
+    serializer_class = StudentWalletSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [WalletAccessThrottle]
 

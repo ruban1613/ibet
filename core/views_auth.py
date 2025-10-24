@@ -97,8 +97,12 @@ def register_view(request):
         }, status=status.HTTP_201_CREATED)
 
     except Exception as e:
+        import traceback
+        error_details = str(e)
+        traceback.print_exc()  # This will print to console for debugging
         return Response({
-            'error': _('Registration failed')
+            'error': _('Registration failed'),
+            'details': error_details
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-q7qwme$j!p+guj!o@ob8=dcn*ihok6@vnvq!#1b3z*0!ixk8$g'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', 'localhost:3000', 'localhost:3001']
 
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
+    'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     'django_otp',
@@ -51,10 +52,12 @@ INSTALLED_APPS = [
     'retiree_module',
     'dailywage_module',
 ]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',  # <--- Add this line here
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -142,6 +145,8 @@ APPEND_SLASH = False
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -173,14 +178,33 @@ REST_FRAMEWORK = {
 }
 
 # Custom Throttling Rates for OTP and Security
+# NOTE: These are relaxed for development/testing. Tighten for production!
 THROTTLE_RATES = {
-    'otp_generation': '5/hour',  # Max 5 OTP requests per hour per user
-    'otp_verification': '3/minute',  # Max 3 verification attempts per minute
-    'wallet_access': '10/minute',  # Max 10 wallet access requests per minute
-    'sensitive_operations': '20/hour',  # Max 20 sensitive operations per hour
-    'strict_anon': '10/hour',  # Very limited for anonymous users
-    'burst': '60/minute',  # Allow bursts up to 60 per minute
+    'otp_generation': '100/hour',  # Relaxed for testing
+    'otp_verification': '50/minute',  # Relaxed for testing
+    'wallet_access': '100/minute',  # Relaxed for testing
+    'sensitive_operations': '200/hour',  # Relaxed for testing
+    'strict_anon': '100/hour',  # Relaxed for testing
+    'burst': '200/minute',  # Relaxed for testing
 }
+
+# CORS Settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Security Settings
 SECURE_BROWSER_XSS_FILTER = True
@@ -192,3 +216,4 @@ SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
