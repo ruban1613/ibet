@@ -26,14 +26,43 @@ class TeacherProfile(models.Model):
     """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='teacher_profiles')
     institute = models.ForeignKey(Institute, on_delete=models.CASCADE, related_name='teachers')
-    monthly_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    pay_day = models.PositiveIntegerField(default=1, help_text="Day of the month salary is typically paid")
+    base_monthly_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    working_days_per_month = models.PositiveIntegerField(default=26)
+    extra_session_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
     joining_date = models.DateField(default=timezone.localdate)
     assigned_students = models.ManyToManyField('InstituteStudentProfile', blank=True, related_name='assigned_teachers')
 
     def __str__(self):
         return f"{self.user.username} - {self.institute.name} (Teacher)"
+
+    @property
+    def daily_rate(self):
+        if self.working_days_per_month > 0:
+            return self.base_monthly_salary / Decimal(str(self.working_days_per_month))
+        return Decimal('0.00')
+
+class TeacherAttendance(models.Model):
+    """
+    Daily attendance and extra session tracking for teachers.
+    """
+    class Status(models.TextChoices):
+        PRESENT = 'PRESENT', _('Present')
+        ABSENT = 'ABSENT', _('Absent')
+        HALF_DAY = 'HALF_DAY', _('Half Day')
+        OVERTIME = 'OVERTIME', _('Overtime / Weekend')
+
+    teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField(default=timezone.localdate)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PRESENT)
+    extra_sessions = models.PositiveIntegerField(default=0, help_text="Number of extra classes/hours taken")
+    remarks = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        unique_together = ['teacher', 'date']
+
+    def __str__(self):
+        return f"{self.teacher.user.username} - {self.date} - {self.status}"
 
 class InstituteStudentProfile(models.Model):
     """

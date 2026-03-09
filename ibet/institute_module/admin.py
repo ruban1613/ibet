@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Institute, TeacherProfile, InstituteStudentProfile, FeePayment, SalaryPayment, InstituteNotification
+from .models import Institute, TeacherProfile, InstituteStudentProfile, FeePayment, SalaryPayment, InstituteNotification, TeacherAttendance, StudentAttendance
 
 @admin.register(Institute)
 class InstituteAdmin(admin.ModelAdmin):
@@ -8,7 +8,7 @@ class InstituteAdmin(admin.ModelAdmin):
 
 @admin.register(TeacherProfile)
 class TeacherProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'institute', 'monthly_salary', 'is_active')
+    list_display = ('user', 'institute', 'base_monthly_salary', 'working_days_per_month', 'is_active')
     list_filter = ('institute', 'is_active')
 
 @admin.register(InstituteStudentProfile)
@@ -30,3 +30,13 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
 class InstituteNotificationAdmin(admin.ModelAdmin):
     list_display = ('notification_type', 'recipient', 'sent_at', 'is_delivered')
     list_filter = ('notification_type', 'is_delivered')
+
+@admin.register(TeacherAttendance)
+class TeacherAttendanceAdmin(admin.ModelAdmin):
+    list_display = ('teacher', 'date', 'status', 'extra_sessions')
+    list_filter = ('status', 'date', 'teacher__institute')
+
+@admin.register(StudentAttendance)
+class StudentAttendanceAdmin(admin.ModelAdmin):
+    list_display = ('student_profile', 'date', 'status', 'marked_by')
+    list_filter = ('status', 'date', 'student_profile__institute')

@@ -359,7 +359,34 @@ async getInstituteTeachers(): Promise<any> {
   return this.request('/institute/teachers/');
 }
 
-async createInstituteTeacher(data: any): Promise<any> {
+async updateTeacherProfile(id: number, data: any): Promise<any> {
+  return this.request(`/institute/teachers/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  });
+}
+
+// Teacher Attendance & Payroll
+async getTeacherAttendance(teacherId?: number, month?: number, year?: number): Promise<any> {
+  const params = new URLSearchParams();
+  if (teacherId) params.append('teacher', teacherId.toString());
+  if (month) params.append('month', month.toString());
+  if (year) params.append('year', year.toString());
+  return this.request(`/institute/teacher-attendance/?${params.toString()}`);
+}
+
+async markTeacherAttendance(data: { teacher: number; date: string; status: string; extra_sessions?: number; remarks?: string }): Promise<any> {
+  return this.request('/institute/teacher-attendance/', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async calculateTeacherPayout(teacherId: number, month: number, year: number): Promise<any> {
+  return this.request(`/institute/teacher-attendance/calculate_payout/?teacher_id=${teacherId}&month=${month}&year=${year}`);
+}
+
+async createInstituteStudent(data: any): Promise<any> {
   return this.request('/institute/teachers/', {
     method: 'POST',
     body: JSON.stringify(data)

@@ -8,10 +8,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
-from .models import Institute, TeacherProfile, InstituteStudentProfile, FeePayment, SalaryPayment, InstituteNotification, StudentAttendance
+from .models import Institute, TeacherProfile, InstituteStudentProfile, FeePayment, SalaryPayment, InstituteNotification, StudentAttendance, TeacherAttendance
 from .serializers import (
     InstituteSerializer, TeacherProfileSerializer, InstituteStudentProfileSerializer,
-    FeePaymentSerializer, SalaryPaymentSerializer, InstituteNotificationSerializer, StudentAttendanceSerializer
+    FeePaymentSerializer, SalaryPaymentSerializer, InstituteNotificationSerializer, StudentAttendanceSerializer, TeacherAttendanceSerializer
 )
 
 User = get_user_model()
@@ -98,6 +98,81 @@ class InstituteViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only users with 'Institute Owner' persona can create an institute.")
         serializer.save(owner=self.request.user)
 
+class TeacherAttendanceViewSet(viewsets.ModelViewSet):
+    serializer_class = TeacherAttendanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.persona == 'INSTITUTE_OWNER':
+            return TeacherAttendance.objects.filter(teacher__institute__owner=user)
+        elif user.persona == 'INSTITUTE_TEACHER':
+            return TeacherAttendance.objects.filter(teacher__user=user)
+        return TeacherAttendance.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        teacher_id = request.data.get('teacher')
+        date = request.data.get('date', timezone.now().date())
+        status_val = request.data.get('status', 'PRESENT')
+        extra_sessions = request.data.get('extra_sessions', 0)
+        remarks = request.data.get('remarks', '')
+
+        teacher = get_object_or_404(TeacherProfile, id=teacher_id, institute__owner=request.user)
+
+        attendance, created = TeacherAttendance.objects.update_or_create(
+            teacher=teacher,
+            date=date,
+            defaults={
+                'status': status_val,
+                'extra_sessions': extra_sessions,
+                'remarks': remarks
+            }
+        )
+
+        return Response(TeacherAttendanceSerializer(attendance).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def calculate_payout(self, request):
+        teacher_id = request.query_params.get('teacher_id')
+        month = int(request.query_params.get('month', timezone.now().month))
+        year = int(request.query_params.get('year', timezone.now().year))
+
+        teacher = get_object_or_404(TeacherProfile, id=teacher_id, institute__owner=request.user)
+        attendance = TeacherAttendance.objects.filter(teacher=teacher, date__month=month, date__year=year)
+
+        absent_days = attendance.filter(status='ABSENT').count()
+        half_days = attendance.filter(status='HALF_DAY').count()
+        ot_days = attendance.filter(status='OVERTIME').count()
+        total_extra_sessions = attendance.aggregate(total=Sum('extra_sessions'))['total'] or 0
+
+        daily_rate = teacher.daily_rate
+        
+        # Logic: 
+        # - Full deduction for ABSENT
+        # - 50% deduction for HALF_DAY
+        # - 1.5x bonus for OVERTIME day
+        # - Session Rate bonus for extra_sessions
+        
+        deductions = (Decimal(str(absent_days)) * daily_rate) + (Decimal(str(half_days)) * daily_rate * Decimal('0.5'))
+        ot_bonus = (Decimal(str(ot_days)) * daily_rate * Decimal('0.5')) # 0.5 because they already get base for that day if present
+        session_bonus = Decimal(str(total_extra_sessions)) * teacher.extra_session_rate
+        
+        net_salary = teacher.base_monthly_salary - deductions + ot_bonus + session_bonus
+
+        return Response({
+            'teacher_name': teacher.user.username,
+            'base_salary': float(teacher.base_monthly_salary),
+            'daily_rate': float(daily_rate),
+            'absent_days': absent_days,
+            'half_days': half_days,
+            'ot_days': ot_days,
+            'extra_sessions': total_extra_sessions,
+            'deductions': float(deductions),
+            'ot_bonus': float(ot_bonus),
+            'session_bonus': float(session_bonus),
+            'net_payout': float(net_salary)
+        })
+
 class TeacherProfileViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -114,11 +189,12 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         username = request.data.get('username')
         institute_id = request.data.get('institute')
-        monthly_salary = request.data.get('monthly_salary')
-        pay_day = request.data.get('pay_day', 1)
+        base_monthly_salary = request.data.get('base_monthly_salary', 0)
+        working_days = request.data.get('working_days_per_month', 26)
+        session_rate = request.data.get('extra_session_rate', 0)
 
-        if not all([username, institute_id, monthly_salary]):
-            return Response({'error': 'username, institute, and monthly_salary are required'}, status=400)
+        if not all([username, institute_id]):
+            return Response({'error': 'username and institute are required'}, status=400)
 
         institute = get_object_or_404(Institute, id=institute_id, owner=request.user)
 
@@ -135,8 +211,9 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
         profile = TeacherProfile.objects.create(
             user=user,
             institute=institute,
-            monthly_salary=monthly_salary,
-            pay_day=pay_day
+            base_monthly_salary=base_monthly_salary,
+            working_days_per_month=working_days,
+            extra_session_rate=session_rate
         )
 
         return Response({
@@ -528,6 +605,7 @@ class InstituteDashboardView(APIView):
             return Response({
                 'role': 'TEACHER',
                 'profile': TeacherProfileSerializer(profile).data,
+                'institutes': [InstituteSerializer(profile.institute).data],
                 'recent_salaries': SalaryPaymentSerializer(recent_salaries, many=True).data,
                 'student_fee_status': student_fee_status,
                 'notifications': InstituteNotificationSerializer(notifications, many=True).data,
@@ -557,6 +635,7 @@ class InstituteDashboardView(APIView):
             return Response({
                 'role': 'STUDENT',
                 'profile': InstituteStudentProfileSerializer(profile).data,
+                'institutes': [InstituteSerializer(profile.institute).data],
                 'institute_name': profile.institute.name,
                 'current_fee_status': FeePaymentSerializer(fee_status).data,
                 'recent_fees': FeePaymentSerializer(recent_fees, many=True).data,
